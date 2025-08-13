@@ -152,7 +152,7 @@ export default function App() {
                     <aside className="bg-white dark:bg-slate-800 w-full md:w-64 md:min-h-screen p-4 border-r border-gray-200 dark:border-slate-700 shadow-sm">
                         <div className="flex items-center gap-3 mb-8">
                             <Archive className="text-blue-600 dark:text-blue-400" size={32} />
-                            <h1 className="text-xl font-bold text-gray-800 dark:text-white">SIMANTAP</h1>
+                            <h1 className="text-xl font-bold text-gray-800 dark:text-white">SIMANTEP</h1>
                         </div>
                         <nav className="flex flex-row md:flex-col gap-2">
                             <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active={currentView === 'dashboard'} onClick={() => navigate('dashboard')} />
@@ -175,7 +175,7 @@ export default function App() {
                                 {isDarkMode ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-blue-600" />}
                             </button>
                         </div>
-                        {renderView()}
+                        {renderView() || <div className="p-6">Halaman tidak ditemukan.</div>}
                     </main>
                 </div>
                 {showInfoModal && <InfoModal onClose={() => setShowInfoModal(false)} />}
@@ -728,8 +728,8 @@ const InfoModal = ({ onClose }) => {
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 dark:text-slate-300 dark:hover:text-white"><XCircle size={24} /></button>
                 <div className="flex flex-col items-center text-center">
                     <Archive size={40} className="text-blue-500 dark:text-blue-400 mb-4" />
-                    <h2 className="text-2xl font-bold mb-2 dark:text-white">Aplikasi SIMANTAP</h2>
-                    <p className="text-gray-600 dark:text-slate-300 mb-4">Sistem Manajemen Arsip Digital ini ditenagai oleh React, Vite, Supabase, dan di-hosting di Vercel.</p>
+                    <h2 className="text-2xl font-bold mb-2 dark:text-white">Aplikasi SIMANTEP</h2>
+                    <p className="text-gray-600 dark:text-slate-300 mb-4">Sistem Informasi Manajemen Kearsipan Terpadu (SIMANTEP) - Aplikasi manajemen arsip digital yang ditenagai oleh React, Vite, Supabase, dan di-hosting di Vercel.</p>
                 </div>
             </div>
         </div>
