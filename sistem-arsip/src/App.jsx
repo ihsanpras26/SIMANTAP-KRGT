@@ -9,6 +9,7 @@
  */
 import React, { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import InputField from './InputField';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { LayoutDashboard, Archive, FilePlus, FolderKanban, Bell, Search, Trash2, Edit, XCircle, LogOut, Info, Sun, Moon, FileDown, Layers, Filter, X, Paperclip, FileText } from 'lucide-react';
