@@ -14,8 +14,8 @@ import toast, { Toaster } from 'react-hot-toast';
 import useAppStore from './store/useAppStore';
 import { useDebounce, useDebouncedCallback } from './hooks/useDebounce';
 import { 
-  ArsipItemSkeleton, 
-  KlasifikasiItemSkeleton, 
+  ArsipSkeleton, 
+  KlasifikasiSkeleton, 
   StatCardSkeleton, 
   FormSkeleton,
   ChartSkeleton 
@@ -1063,9 +1063,9 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                     </table>
                 ) : isDataLoading ? (
                     <div className="space-y-4">
-                        <ArsipItemSkeleton />
-                        <ArsipItemSkeleton />
-                        <ArsipItemSkeleton />
+                        <ArsipSkeleton />
+                                <ArsipSkeleton />
+                                <ArsipSkeleton />
                     </div>
                 ) : (
                     <div className="text-center py-12 text-gray-500 dark:text-slate-400">
