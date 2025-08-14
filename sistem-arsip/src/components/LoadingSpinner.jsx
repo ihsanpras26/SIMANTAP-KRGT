@@ -67,14 +67,14 @@ export const OverlaySpinner = ({ loading = false, children, message = 'Memuat...
     <div className="relative">
       {children}
       {loading && (
-        <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 flex items-center justify-center z-50 rounded-lg">
-          <div className="flex flex-col items-center gap-3">
+        <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center z-50 rounded-lg animate-fadeIn">
+          <div className="flex flex-col items-center gap-3 bg-white/80 p-4 rounded-xl shadow-lg border border-gray-100">
             <LoadingSpinner 
               type="ring" 
               size={40} 
               color="#3B82F6" 
             />
-            <p className="text-sm text-gray-600 dark:text-slate-400">{message}</p>
+            <p className="text-sm text-gray-600 font-medium">{message}</p>
           </div>
         </div>
       )}

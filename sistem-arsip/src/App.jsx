@@ -28,8 +28,9 @@ import LoadingSpinner, {
 } from './components/LoadingSpinner';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { LayoutDashboard, Archive, FilePlus, FolderKanban, Bell, Search, Trash2, Edit, XCircle, LogOut, Info, Sun, Moon, FileDown, Layers, Filter, X, Paperclip, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, Archive, FilePlus, FolderKanban, Bell, Search, Trash2, Edit, XCircle, LogOut, Info, FileDown, Layers, Filter, X, Paperclip, FileText, CheckCircle, AlertCircle, ChevronRight, Home } from 'lucide-react';
 import DevIndicator from './components/DevIndicator.jsx'
+import './animations.css'
 
 // --- Konfigurasi Supabase ---
 // Pastikan Anda membuat file .env dan mengisinya
@@ -50,17 +51,19 @@ if (isValidConfig) {
 
 // Komponen untuk menampilkan pesan konfigurasi
 const ConfigurationMessage = () => (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
-        <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-lg max-w-md">
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-yellow-50 to-orange-100">
+        <div className="bg-white/90 backdrop-blur-sm p-8 rounded-2xl shadow-2xl max-w-md border border-yellow-200 animate-scaleIn">
             <div className="text-center">
-                <AlertCircle className="mx-auto text-yellow-500 mb-4" size={48} />
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Konfigurasi Diperlukan</h2>
-                <p className="text-gray-600 dark:text-slate-300 mb-4">
+                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-yellow-100 rounded-full">
+                    <AlertCircle className="text-yellow-600" size={32} />
+                </div>
+                <h2 className="text-xl font-bold text-gray-800 mb-4">Konfigurasi Diperlukan</h2>
+                <p className="text-gray-600 mb-6">
                     Silakan konfigurasi file .env dengan kredensial Supabase Anda.
                 </p>
-                <div className="text-left bg-gray-100 dark:bg-slate-700 p-3 rounded text-sm">
-                    <p className="font-mono">VITE_SUPABASE_URL=your_url_here</p>
-                    <p className="font-mono">VITE_SUPABASE_ANON_KEY=your_key_here</p>
+                <div className="text-left bg-gray-50 border border-gray-200 p-4 rounded-lg text-sm">
+                    <p className="font-mono text-gray-700 mb-1">VITE_SUPABASE_URL=your_url_here</p>
+                    <p className="font-mono text-gray-700">VITE_SUPABASE_ANON_KEY=your_key_here</p>
                 </div>
             </div>
         </div>
@@ -96,12 +99,72 @@ export default function App() {
     const [editingArsip, setEditingArsip] = useState(null);
     const [editingKlasifikasi, setEditingKlasifikasi] = useState(null);
     const [showInfoModal, setShowInfoModal] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(() => {
-        const saved = localStorage.getItem('darkMode');
-        return saved ? JSON.parse(saved) : false;
-    });
+    // Removed dark mode state - using light mode only
     // Notification state removed - using react-hot-toast instead
     const [deleteConfirmModal, setDeleteConfirmModal] = useState({ show: false, id: null, message: '' });
+    
+    // Search functionality state
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [showSearchResults, setShowSearchResults] = useState(false);
+
+    // --- Search Functionality ---
+    const performSearch = async (query) => {
+        if (!query.trim()) {
+            setSearchResults([]);
+            setShowSearchResults(false);
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+            const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
+            
+            // Search in arsip
+            const arsipResults = arsipList.filter(arsip => {
+                const searchableText = `${arsip.perihal} ${arsip.nomorSurat} ${arsip.tujuanSurat} ${arsip.kodeKlasifikasi}`.toLowerCase();
+                return searchTerms.some(term => searchableText.includes(term));
+            }).map(arsip => ({ ...arsip, type: 'arsip' }));
+
+            // Search in klasifikasi
+            const klasifikasiResults = klasifikasiList.filter(klasifikasi => {
+                const searchableText = `${klasifikasi.kode} ${klasifikasi.nama}`.toLowerCase();
+                return searchTerms.some(term => searchableText.includes(term));
+            }).map(klasifikasi => ({ ...klasifikasi, type: 'klasifikasi' }));
+
+            const allResults = [...arsipResults, ...klasifikasiResults];
+            setSearchResults(allResults);
+            setShowSearchResults(true);
+        } catch (error) {
+            console.error('Search error:', error);
+            toast.error('Terjadi kesalahan saat mencari');
+        } finally {
+            setIsSearching(false);
+        }
+    };
+
+    // Debounced search
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            performSearch(searchQuery);
+        }, 300);
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery, arsipList, klasifikasiList]);
+
+    // Close search results when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (!event.target.closest('.search-container')) {
+                setShowSearchResults(false);
+            }
+        };
+        
+        if (showSearchResults) {
+            document.addEventListener('mousedown', handleClickOutside);
+            return () => document.removeEventListener('mousedown', handleClickOutside);
+        }
+    }, [showSearchResults]);
 
     // --- Efek untuk Mengambil Data Awal & Berlangganan Perubahan ---
     useEffect(() => {
@@ -285,10 +348,13 @@ export default function App() {
 
     if (storeLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
-                <div className="flex flex-col items-center gap-4">
-                    <LoadingSpinner type="ring" size={40} color="#3B82F6" />
-                    <div className="text-xl font-semibold dark:text-white">Memuat Sistem...</div>
+            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+                <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-white/20 animate-scaleIn">
+                    <div className="flex flex-col items-center gap-4">
+                        <LoadingSpinner type="ring" size={40} color="#3B82F6" />
+                        <div className="text-xl font-semibold text-gray-800">Memuat Sistem...</div>
+                        <div className="text-sm text-gray-600">Mohon tunggu sebentar</div>
+                    </div>
                 </div>
             </div>
         );
@@ -313,13 +379,14 @@ export default function App() {
     };
 
     return (
-        <div className={isDarkMode ? 'dark' : ''}>
-            <div className="bg-gray-50 dark:bg-slate-900 min-h-screen font-sans text-gray-800 dark:text-slate-300 transition-colors duration-300">
+        <>
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen font-sans text-gray-800 transition-all duration-300">
                 <div className="flex flex-col md:flex-row">
-                    <aside className="bg-white dark:bg-slate-800 w-full md:w-64 md:min-h-screen p-4 border-r border-gray-200 dark:border-slate-700 shadow-sm">
+                    <aside className="bg-white/80 backdrop-blur-sm w-full md:w-64 md:min-h-screen p-4 border-r border-gray-200 shadow-lg">
                         <div className="flex items-center gap-3 mb-8">
-                            <Archive className="text-blue-600 dark:text-blue-400" size={32} />
-                            <h1 className="text-xl font-bold text-gray-800 dark:text-white">SIMANTEP</h1>
+                            <Archive className="text-blue-600" size={32} />
+                            <h1 className="text-xl font-bold text-gray-800">SIMANTEP</h1>
+                            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-medium">v2.0</span>
                         </div>
                         <nav className="flex flex-row md:flex-col gap-2">
                             <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active={currentView === 'dashboard'} onClick={() => navigate('dashboard')} />
@@ -330,31 +397,124 @@ export default function App() {
                             <NavItem icon={<FileText size={20} />} label="Laporan" active={currentView === 'laporan'} onClick={() => navigate('laporan')} />
                         </nav>
                          <div className="mt-auto pt-8 hidden md:block">
-                            <button onClick={() => setShowInfoModal(true)} className="w-full flex items-center gap-2 text-sm text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 p-2 rounded-lg transition-colors">
-                                <Info size={16} /> Info Aplikasi
+                            <button onClick={() => setShowInfoModal(true)} className="w-full flex items-center gap-2 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-all duration-200">
+                                <Info size={16} />
+                                Tentang Aplikasi
                             </button>
                         </div>
                     </aside>
 
-                    <main className="flex-1 p-4 sm:p-6 lg:p-8 relative">
+                    <main className="flex-1 p-4 md:p-6 relative">
                         {import.meta.env.DEV && <DevIndicator />}
-                        <div className="absolute top-4 right-4 z-10">
-                            <button onClick={() => {
-                                const newMode = !isDarkMode;
-                                setIsDarkMode(newMode);
-                                localStorage.setItem('darkMode', JSON.stringify(newMode));
-                            }} className="p-2 rounded-full bg-white dark:bg-slate-700 shadow-md hover:bg-gray-100 dark:hover:bg-slate-600 transition-all">
-                                {isDarkMode ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-blue-600" />}
-                            </button>
+                        
+                        {/* Header with Breadcrumbs and Search */}
+                        <div className="mb-6 space-y-4">
+                            {/* Breadcrumbs */}
+                            <nav className="flex items-center space-x-2 text-sm text-gray-600 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-lg shadow-sm">
+                                <Home size={16} className="text-blue-600" />
+                                <ChevronRight size={14} />
+                                <span className="capitalize font-medium text-blue-600">
+                                    {currentView === 'dashboard' ? 'Dashboard' :
+                                     currentView === 'arsip' ? 'Daftar Arsip' :
+                                     currentView === 'tambah' ? 'Tambah Arsip' :
+                                     currentView === 'klasifikasi' ? 'Kode Klasifikasi' :
+                                     currentView === 'laporan' ? 'Laporan' : 'Dashboard'}
+                                </span>
+                            </nav>
+                            
+                            {/* Global Search Bar */}
+                            <div className="relative search-container">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                                    <input
+                                        type="text"
+                                        placeholder="Cari arsip, klasifikasi, nomor surat..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-700 placeholder-gray-400"
+                                    />
+                                    {isSearching && (
+                                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {/* Search Results Dropdown */}
+                                {showSearchResults && searchResults.length > 0 && (
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl z-50 max-h-96 overflow-y-auto animate-slideDown">
+                                        <div className="p-2">
+                                            <div className="text-xs text-gray-500 px-3 py-2 font-medium">
+                                                {searchResults.length} hasil ditemukan
+                                            </div>
+                                            {searchResults.map((result, index) => (
+                                                <div
+                                                    key={`${result.type}-${result.id}`}
+                                                    className="p-3 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors duration-150 border-b border-gray-100 last:border-b-0"
+                                                    onClick={() => {
+                                                        if (result.type === 'arsip') {
+                                                            navigate('semua');
+                                                        } else {
+                                                            navigate('klasifikasi');
+                                                        }
+                                                        setShowSearchResults(false);
+                                                        setSearchQuery('');
+                                                    }}
+                                                >
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="flex-shrink-0 mt-1">
+                                                            {result.type === 'arsip' ? (
+                                                                <FileText className="text-blue-600" size={16} />
+                                                            ) : (
+                                                                <FolderKanban className="text-green-600" size={16} />
+                                                            )}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="text-sm font-medium text-gray-900 truncate">
+                                                                    {result.type === 'arsip' ? result.perihal : result.nama}
+                                                                </span>
+                                                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                                                                    result.type === 'arsip' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'
+                                                                }`}>
+                                                                    {result.type === 'arsip' ? 'Arsip' : 'Klasifikasi'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-xs text-gray-500">
+                                                                {result.type === 'arsip' ? (
+                                                                    <span>{result.nomorSurat} • {result.kodeKlasifikasi}</span>
+                                                                ) : (
+                                                                    <span>Kode: {result.kode}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {/* No Results */}
+                                {showSearchResults && searchResults.length === 0 && searchQuery.trim() && (
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl z-50 animate-slideDown">
+                                        <div className="p-6 text-center">
+                                            <Search className="mx-auto text-gray-400 mb-2" size={24} />
+                                            <p className="text-sm text-gray-500">Tidak ada hasil untuk "{searchQuery}"</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        {renderView() || <div className="p-6">Halaman tidak ditemukan.</div>}
+                        
+                        {renderView() || <div className="p-6 bg-white rounded-lg shadow-sm">Halaman tidak ditemukan.</div>}
                     </main>
                 </div>
                 {showInfoModal && <InfoModal onClose={() => setShowInfoModal(false)} />}
                 <Toaster />
                 {deleteConfirmModal.show && <DeleteConfirmModal message={deleteConfirmModal.message} onConfirm={confirmDelete} onCancel={() => setDeleteConfirmModal({ show: false, id: null, message: '' })} />}
             </div>
-        </div>
+        </>
     );
 }
 
@@ -363,23 +523,23 @@ export default function App() {
 // --- Komponen Modal Konfirmasi Delete ---
 const DeleteConfirmModal = ({ message, onConfirm, onCancel }) => {
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
-                <div className="flex items-center gap-3 mb-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
+            <div className="bg-white p-6 rounded-xl shadow-2xl max-w-md w-full mx-4 border border-gray-100 animate-slideUp">
+                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
                     <AlertCircle className="text-red-500" size={24} />
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Konfirmasi Hapus</h3>
                 </div>
-                <p className="text-gray-600 dark:text-slate-300 mb-6">{message}</p>
+                <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Konfirmasi Hapus</h3>
+                <p className="text-gray-600 mb-6 text-center">{message}</p>
                 <div className="flex gap-3 justify-end">
                     <button 
                         onClick={onCancel}
-                        className="px-4 py-2 text-gray-600 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                        className="px-4 py-2 text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all duration-200 font-medium"
                     >
                         Batal
                     </button>
                     <button 
                         onClick={onConfirm}
-                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
                     >
                         Hapus
                     </button>
@@ -1129,7 +1289,7 @@ const ExportExcelButton = ({ data, filename, klasifikasiList }) => {
         <button 
             // onClick={handleExport}
             disabled={data.length === 0}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-700 bg-green-100 dark:bg-green-900/50 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-green-700 bg-green-100 rounded-lg hover:bg-green-200 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
         >
             <FileDown size={16} />
             Ekspor Excel
