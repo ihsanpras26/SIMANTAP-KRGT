@@ -19,8 +19,36 @@ import { LayoutDashboard, Archive, FilePlus, FolderKanban, Bell, Search, Trash2,
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// --- Inisialisasi Klien Supabase ---
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// --- Inisialisasi Klien Supabase (hanya jika environment variables tersedia) ---
+let supabase = null;
+const isValidConfig = supabaseUrl && supabaseAnonKey && 
+    !supabaseUrl.includes('your_supabase_project_url_here') && 
+    !supabaseAnonKey.includes('your_supabase_anon_key_here');
+
+if (isValidConfig) {
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+} else {
+    console.error('Missing or invalid Supabase configuration. Please check your .env file.');
+}
+
+// Komponen untuk menampilkan pesan konfigurasi
+const ConfigurationMessage = () => (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
+        <div className="bg-white dark:bg-slate-800 p-8 rounded-lg shadow-lg max-w-md">
+            <div className="text-center">
+                <AlertCircle className="mx-auto text-yellow-500 mb-4" size={48} />
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Konfigurasi Diperlukan</h2>
+                <p className="text-gray-600 dark:text-slate-300 mb-4">
+                    Silakan konfigurasi file .env dengan kredensial Supabase Anda.
+                </p>
+                <div className="text-left bg-gray-100 dark:bg-slate-700 p-3 rounded text-sm">
+                    <p className="font-mono">VITE_SUPABASE_URL=your_url_here</p>
+                    <p className="font-mono">VITE_SUPABASE_ANON_KEY=your_key_here</p>
+                </div>
+            </div>
+        </div>
+    </div>
+);
 
 // --- Fungsi Helper ---
 const toTitleCase = (str) => {
@@ -30,16 +58,22 @@ const toTitleCase = (str) => {
 
 // --- Komponen Utama Aplikasi ---
 export default function App() {
+    // Cek konfigurasi environment variables
+    if (!isValidConfig) {
+        return <ConfigurationMessage />;
+    }
+
     // --- State Management ---
+    const [currentView, setCurrentView] = useState('dashboard');
     const [arsipList, setArsipList] = useState([]);
     const [klasifikasiList, setKlasifikasiList] = useState([]);
-    const [currentView, setCurrentView] = useState('dashboard');
     const [editingArsip, setEditingArsip] = useState(null);
     const [editingKlasifikasi, setEditingKlasifikasi] = useState(null);
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+    const [deleteConfirmModal, setDeleteConfirmModal] = useState({ show: false, id: null, message: '' });
 
     // --- Efek untuk Mengambil Data Awal & Berlangganan Perubahan ---
     useEffect(() => {
@@ -114,6 +148,19 @@ export default function App() {
         }, 4000);
     };
 
+    const confirmDelete = async () => {
+        try {
+            const { error } = await supabase.from('klasifikasi').delete().eq('id', deleteConfirmModal.id);
+            if (error) throw error;
+            showNotification('Kode klasifikasi berhasil dihapus!', 'success');
+            setDeleteConfirmModal({ show: false, id: null, message: '' });
+        } catch (error) {
+            console.error("Error deleting klasifikasi:", error);
+            showNotification(`Gagal menghapus kode klasifikasi: ${error.message}`, 'error');
+            setDeleteConfirmModal({ show: false, id: null, message: '' });
+        }
+    };
+
     // --- Fungsi Navigasi ---
     const navigate = (view) => {
         setCurrentView(view);
@@ -156,7 +203,7 @@ export default function App() {
     }
 
     const renderView = () => {
-        const props = { supabase, klasifikasiList, setEditingArsip, editingKlasifikasi, setEditingKlasifikasi, navigate, arsipList, activeArchives, inactiveArchives, showNotification };
+        const props = { supabase, klasifikasiList, setEditingArsip, editingKlasifikasi, setEditingKlasifikasi, navigate, arsipList, activeArchives, inactiveArchives, showNotification, setDeleteConfirmModal };
         switch (currentView) {
             case 'tambah':
                 return <ArsipForm {...props} arsipToEdit={editingArsip} onFinish={() => navigate('dashboard')} />;
@@ -208,6 +255,7 @@ export default function App() {
                 </div>
                 {showInfoModal && <InfoModal onClose={() => setShowInfoModal(false)} />}
                 {notification.show && <Toast message={notification.message} type={notification.type} onClose={() => setNotification({ show: false, message: '', type: 'success' })} />}
+                {deleteConfirmModal.show && <DeleteConfirmModal message={deleteConfirmModal.message} onConfirm={confirmDelete} onCancel={() => setDeleteConfirmModal({ show: false, id: null, message: '' })} />}
             </div>
         </div>
     );
@@ -233,6 +281,35 @@ const Toast = ({ message, type, onClose }) => {
                 <button onClick={onClose} className="text-white/80 hover:text-white transition-colors ml-2">
                     <X size={18} />
                 </button>
+            </div>
+        </div>
+    );
+};
+
+// --- Komponen Modal Konfirmasi Delete ---
+const DeleteConfirmModal = ({ message, onConfirm, onCancel }) => {
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+                <div className="flex items-center gap-3 mb-4">
+                    <AlertCircle className="text-red-500" size={24} />
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Konfirmasi Hapus</h3>
+                </div>
+                <p className="text-gray-600 dark:text-slate-300 mb-6">{message}</p>
+                <div className="flex gap-3 justify-end">
+                    <button 
+                        onClick={onCancel}
+                        className="px-4 py-2 text-gray-600 dark:text-slate-300 bg-gray-100 dark:bg-slate-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
+                    >
+                        Batal
+                    </button>
+                    <button 
+                        onClick={onConfirm}
+                        className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                        Hapus
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -429,24 +506,19 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
 // Sisa komponen (NavItem, StatCard, Dashboard, dll.) tetap sama, hanya perlu passing props 'supabase'
 // ... (Saya akan menyalin komponen lainnya dengan modifikasi yang diperlukan)
 
-const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, setEditingKlasifikasi, showNotification }) => {
+const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, setEditingKlasifikasi, showNotification, setDeleteConfirmModal }) => {
     // ... (JSX sama, hanya logic handler yang berubah)
     const handleEdit = (klasifikasi) => {
         setEditingKlasifikasi(klasifikasi);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm("Anda yakin ingin menghapus kode ini? Tindakan ini tidak dapat diurungkan dan dapat mempengaruhi arsip yang ada.")) {
-            try {
-                const { error } = await supabase.from('klasifikasi').delete().eq('id', id);
-                if (error) throw error;
-                showNotification('Kode klasifikasi berhasil dihapus!', 'success');
-            } catch (error) {
-                console.error("Error deleting klasifikasi:", error);
-                showNotification(`Gagal menghapus kode klasifikasi: ${error.message}`, 'error');
-            }
-        }
+    const handleDelete = (id, kode) => {
+        setDeleteConfirmModal({ 
+            show: true, 
+            id, 
+            message: `Anda yakin ingin menghapus kode klasifikasi "${kode}"? Tindakan ini tidak dapat diurungkan dan dapat mempengaruhi arsip yang ada.` 
+        });
     };
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -478,7 +550,7 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                                 <button onClick={() => handleEdit(k)} className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300" title="Edit">
                                                     <Edit size={16} />
                                                 </button>
-                                                <button onClick={() => handleDelete(k.id)} className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Hapus">
+                                                <button onClick={() => handleDelete(k.id, k.kode)} className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Hapus">
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
