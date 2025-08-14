@@ -13,6 +13,7 @@ import InputField from './InputField';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { LayoutDashboard, Archive, FilePlus, FolderKanban, Bell, Search, Trash2, Edit, XCircle, LogOut, Info, Sun, Moon, FileDown, Layers, Filter, X, Paperclip, FileText, CheckCircle, AlertCircle } from 'lucide-react';
+import DevIndicator from './components/DevIndicator.jsx'
 
 // --- Konfigurasi Supabase ---
 // Pastikan Anda membuat file .env dan mengisinya
@@ -245,6 +246,7 @@ export default function App() {
                     </aside>
 
                     <main className="flex-1 p-4 sm:p-6 lg:p-8 relative">
+                        {import.meta.env.DEV && <DevIndicator />}
                         <div className="absolute top-4 right-4 z-10">
                             <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full bg-white dark:bg-slate-700 shadow-md hover:bg-gray-100 dark:hover:bg-slate-600 transition-all">
                                 {isDarkMode ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-blue-600" />}
