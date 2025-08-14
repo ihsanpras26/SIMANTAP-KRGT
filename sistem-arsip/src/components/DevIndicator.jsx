@@ -32,7 +32,7 @@ export default function DevIndicator() {
     }`}>
       <div className={`px-3 py-2 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 ${
         isUpdating 
-          ? 'bg-blue-500 text-white' 
+          ? 'bg-primary-500 text-white' 
           : 'bg-green-500 text-white'
       }`}>
         <div className={`w-2 h-2 rounded-full ${

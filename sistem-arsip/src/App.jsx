@@ -348,12 +348,12 @@ export default function App() {
 
     if (storeLoading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-                <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-2xl border border-white/20 animate-scaleIn">
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="bg-white p-8 rounded-2xl shadow-soft border border-gray-100 animate-scaleIn">
                     <div className="flex flex-col items-center gap-4">
                         <LoadingSpinner type="ring" size={40} color="#3B82F6" />
                         <div className="text-xl font-semibold text-gray-800">Memuat Sistem...</div>
-                        <div className="text-sm text-gray-600">Mohon tunggu sebentar</div>
+                        <div className="text-sm text-gray-500">Mohon tunggu sebentar</div>
                     </div>
                 </div>
             </div>
@@ -380,15 +380,19 @@ export default function App() {
 
     return (
         <>
-        <div className="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen font-sans text-gray-800 transition-all duration-300">
-                <div className="flex flex-col md:flex-row">
-                    <aside className="bg-white/80 backdrop-blur-sm w-full md:w-64 md:min-h-screen p-4 border-r border-gray-200 shadow-lg">
-                        <div className="flex items-center gap-3 mb-8">
-                            <Archive className="text-blue-600" size={32} />
-                            <h1 className="text-xl font-bold text-gray-800">SIMANTEP</h1>
-                            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-medium">v2.0</span>
+        <div className="bg-gray-50 min-h-screen font-sans text-gray-900 transition-all duration-300">
+                <div className="flex flex-col lg:flex-row">
+                    <aside className="bg-white w-full lg:w-72 lg:min-h-screen p-6 border-r border-gray-200 shadow-soft">
+                        <div className="flex items-center gap-3 mb-10">
+                            <div className="p-2 bg-primary-500 rounded-xl">
+                                <Archive className="text-white" size={28} />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-bold text-gray-900">SIMANTEP</h1>
+                                <span className="text-xs text-gray-500 font-medium">Sistem Arsip Digital</span>
+                            </div>
                         </div>
-                        <nav className="flex flex-row md:flex-col gap-2">
+                        <nav className="flex flex-row lg:flex-col gap-3">
                             <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active={currentView === 'dashboard'} onClick={() => navigate('dashboard')} />
                             <NavItem icon={<FilePlus size={20} />} label="Tambah Arsip" active={currentView === 'tambah'} onClick={() => navigate('tambah')} />
                             <NavItem icon={<Layers size={20} />} label="Semua Arsip" active={currentView === 'semua'} onClick={() => navigate('semua')} />
@@ -396,24 +400,24 @@ export default function App() {
                             <NavItem icon={<Search size={20} />} label="Pencarian Lanjutan" active={currentView === 'cari'} onClick={() => navigate('cari')} />
                             <NavItem icon={<FileText size={20} />} label="Laporan" active={currentView === 'laporan'} onClick={() => navigate('laporan')} />
                         </nav>
-                         <div className="mt-auto pt-8 hidden md:block">
-                            <button onClick={() => setShowInfoModal(true)} className="w-full flex items-center gap-2 text-sm text-gray-500 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-all duration-200">
-                                <Info size={16} />
-                                Tentang Aplikasi
+                         <div className="mt-auto pt-8 hidden lg:block">
+                            <button onClick={() => setShowInfoModal(true)} className="w-full flex items-center gap-3 text-sm text-gray-500 hover:text-primary-600 hover:bg-primary-50 p-3 rounded-xl transition-all duration-200">
+                                <Info size={18} />
+                                <span>Tentang Aplikasi</span>
                             </button>
                         </div>
                     </aside>
 
-                    <main className="flex-1 p-4 md:p-6 relative">
+                    <main className="flex-1 p-6 lg:p-8 relative">
                         {import.meta.env.DEV && <DevIndicator />}
                         
                         {/* Header with Breadcrumbs and Search */}
-                        <div className="mb-6 space-y-4">
+                        <div className="mb-8 space-y-6">
                             {/* Breadcrumbs */}
-                            <nav className="flex items-center space-x-2 text-sm text-gray-600 bg-white/60 backdrop-blur-sm px-4 py-2 rounded-lg shadow-sm">
-                                <Home size={16} className="text-blue-600" />
-                                <ChevronRight size={14} />
-                                <span className="capitalize font-medium text-blue-600">
+                            <nav className="flex items-center space-x-2 text-sm text-gray-500 bg-white px-4 py-3 rounded-xl shadow-soft border border-gray-100">
+                                <Home size={16} className="text-primary-500" />
+                                <ChevronRight size={14} className="text-gray-300" />
+                                <span className="capitalize font-medium text-gray-900">
                                     {currentView === 'dashboard' ? 'Dashboard' :
                                      currentView === 'arsip' ? 'Daftar Arsip' :
                                      currentView === 'tambah' ? 'Tambah Arsip' :
@@ -425,32 +429,32 @@ export default function App() {
                             {/* Global Search Bar */}
                             <div className="relative search-container">
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+                                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                                     <input
                                         type="text"
                                         placeholder="Cari arsip, klasifikasi, nomor surat..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-3 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-700 placeholder-gray-400"
+                                        className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl shadow-soft focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-400 hover:border-gray-300"
                                     />
                                     {isSearching && (
-                                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                                        <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-500"></div>
                                         </div>
                                     )}
                                 </div>
                                 
                                 {/* Search Results Dropdown */}
                                 {showSearchResults && searchResults.length > 0 && (
-                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl z-50 max-h-96 overflow-y-auto animate-slideDown">
-                                        <div className="p-2">
-                                            <div className="text-xs text-gray-500 px-3 py-2 font-medium">
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-large z-50 max-h-96 overflow-y-auto animate-slideDown">
+                                        <div className="p-3">
+                                            <div className="text-xs text-gray-500 px-3 py-2 font-medium bg-gray-50 rounded-lg mb-2">
                                                 {searchResults.length} hasil ditemukan
                                             </div>
                                             {searchResults.map((result, index) => (
                                                 <div
                                                     key={`${result.type}-${result.id}`}
-                                                    className="p-3 hover:bg-blue-50 rounded-lg cursor-pointer transition-colors duration-150 border-b border-gray-100 last:border-b-0"
+                                                    className="p-4 hover:bg-primary-50 rounded-xl cursor-pointer transition-all duration-200 border border-transparent hover:border-primary-100 mb-2 last:mb-0"
                                                     onClick={() => {
                                                         if (result.type === 'arsip') {
                                                             navigate('semua');
@@ -464,9 +468,9 @@ export default function App() {
                                                     <div className="flex items-start gap-3">
                                                         <div className="flex-shrink-0 mt-1">
                                                             {result.type === 'arsip' ? (
-                                                                <FileText className="text-blue-600" size={16} />
+                                                                <FileText className="text-primary-600" size={18} />
                                                             ) : (
-                                                                <FolderKanban className="text-green-600" size={16} />
+                                                                <FolderKanban className="text-green-600" size={18} />
                                                             )}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
@@ -475,7 +479,7 @@ export default function App() {
                                                                     {result.type === 'arsip' ? result.perihal : result.nama}
                                                                 </span>
                                                                 <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                                                    result.type === 'arsip' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'
+                                                                    result.type === 'arsip' ? 'bg-primary-100 text-primary-700' : 'bg-green-100 text-green-700'
                                                                 }`}>
                                                                     {result.type === 'arsip' ? 'Arsip' : 'Klasifikasi'}
                                                                 </span>
@@ -497,17 +501,18 @@ export default function App() {
                                 
                                 {/* No Results */}
                                 {showSearchResults && searchResults.length === 0 && searchQuery.trim() && (
-                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl shadow-xl z-50 animate-slideDown">
-                                        <div className="p-6 text-center">
-                                            <Search className="mx-auto text-gray-400 mb-2" size={24} />
-                                            <p className="text-sm text-gray-500">Tidak ada hasil untuk "{searchQuery}"</p>
+                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-large z-50 animate-slideDown">
+                                        <div className="p-8 text-center">
+                                            <Search className="mx-auto text-gray-400 mb-3" size={28} />
+                                            <p className="text-sm text-gray-600 font-medium">Tidak ada hasil untuk "{searchQuery}"</p>
+                                            <p className="text-xs text-gray-400 mt-1">Coba gunakan kata kunci yang berbeda</p>
                                         </div>
                                     </div>
                                 )}
                             </div>
                         </div>
                         
-                        {renderView() || <div className="p-6 bg-white rounded-lg shadow-sm">Halaman tidak ditemukan.</div>}
+                        {renderView() || <div className="p-8 bg-white rounded-xl shadow-soft border border-gray-100">Halaman tidak ditemukan.</div>}
                     </main>
                 </div>
                 {showInfoModal && <InfoModal onClose={() => setShowInfoModal(false)} />}
@@ -715,7 +720,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 <InputField name="perihal" label="Perihal / Isi Ringkas" value={formData.perihal} onChange={handleChange} required />
                 <div>
                     <label htmlFor="kodeKlasifikasi" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Kode Klasifikasi</label>
-                    <select id="kodeKlasifikasi" name="kodeKlasifikasi" value={formData.kodeKlasifikasi} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
+                    <select id="kodeKlasifikasi" name="kodeKlasifikasi" value={formData.kodeKlasifikasi} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                         <option value="">Pilih Kode Klasifikasi</option>
                         {groupedKlasifikasi.map(group => {
                             if (group.subItems && group.subItems.length > 0) {
@@ -751,7 +756,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                         <div className="space-y-1 text-center">
                             <FilePlus className="mx-auto h-12 w-12 text-gray-400" />
                             <div className="flex text-sm text-gray-600 dark:text-slate-400">
-                                <label htmlFor="file-upload" className="relative cursor-pointer bg-white dark:bg-slate-800 rounded-md font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+                                <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500">
                                     <span>Pilih berkas untuk diunggah</span>
                                     <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} />
                                 </label>
@@ -763,14 +768,14 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                     {!file && existingFile.fileName && (
                          <div className="mt-2 text-sm text-gray-500 dark:text-slate-400">
                             <span>Lampiran saat ini: </span>
-                            <a href={`${supabaseUrl}/storage/v1/object/public/arsip-files/${existingFile.filePath}`} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">{existingFile.fileName}</a>
+                            <a href={`${supabaseUrl}/storage/v1/object/public/arsip-files/${existingFile.filePath}`} target="_blank" rel="noopener noreferrer" className="font-medium text-primary-600 hover:underline">{existingFile.fileName}</a>
                         </div>
                     )}
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4">
                     <button type="button" onClick={onFinish} className="px-6 py-2 rounded-lg bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500 text-gray-700 dark:text-slate-200">Batal</button>
-                    <button type="submit" disabled={isLoading} className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white disabled:opacity-50 flex items-center gap-2">
+                    <button type="submit" disabled={isLoading} className="px-6 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50 flex items-center gap-2">
                         {isLoading ? `Menyimpan...` : (arsipToEdit ? 'Simpan Perubahan' : 'Simpan Arsip')}
                     </button>
                 </div>
@@ -823,7 +828,7 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                         <td className="p-3 text-center">{k.retensiInaktif} thn</td>
                                         <td className="p-3 text-center">
                                             <div className="flex justify-center gap-3">
-                                                <button onClick={() => handleEdit(k)} className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300" title="Edit">
+                                                <button onClick={() => handleEdit(k)} className="text-primary-500 hover:text-primary-700" title="Edit">
                                                     <Edit size={16} />
                                                 </button>
                                                 <button onClick={() => handleDelete(k.id, k.kode)} className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Hapus">
@@ -946,7 +951,7 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotificati
                 <InputField name="retensiInaktif" label="Retensi Inaktif (Tahun)" type="number" value={formData.retensiInaktif} onChange={handleChange} required />
                 <div className="flex justify-end gap-4 pt-2">
                     {klasifikasiToEdit && <button type="button" onClick={onFinish} className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-500">Batal</button>}
-                    <button type="submit" disabled={isLoading} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 flex items-center justify-center">{isLoading ? 'Menyimpan...' : 'Simpan'}</button>
+                    <button type="submit" disabled={isLoading} className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50 flex items-center justify-center">{isLoading ? 'Menyimpan...' : 'Simpan'}</button>
                 </div>
             </form>
         </div>
@@ -1033,7 +1038,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                 <tr key={arsip.id} className="border-b border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50">
                                     <td className="p-3 text-center">
                                         {fileUrl ? (
-                                            <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:text-blue-700" title={arsip.fileName}>
+                                            <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:text-primary-700" title={arsip.fileName}>
                                                 <Paperclip size={18} />
                                             </a>
                                         ) : (
@@ -1049,7 +1054,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                     <td className="p-3 text-gray-500 dark:text-slate-400" title={getKlasifikasiDesc(arsip.kodeKlasifikasi)}>{arsip.kodeKlasifikasi}</td>
                                     <td className="p-3 text-center">
                                         <div className="flex justify-center gap-3">
-                                            <button onClick={() => setEditingArsip(arsip)} className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300" title="Edit">
+                                            <button onClick={() => setEditingArsip(arsip)} className="text-primary-500 hover:text-primary-700" title="Edit">
                                                 <Edit size={16} />
                                             </button>
                                             <button onClick={() => handleDelete(arsip.id, arsip.filePath)} className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Hapus">
@@ -1146,7 +1151,7 @@ const AdvancedSearchView = ({ arsipList, ...props }) => {
                     </div>
                     <div>
                         <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Status Arsip</label>
-                        <select name="status" id="status" value={filters.status} onChange={handleFilterChange} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select name="status" id="status" value={filters.status} onChange={handleFilterChange} className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                             <option value="semua">Semua Status</option>
                             <option value="aktif">Aktif</option>
                             <option value="inaktif">Inaktif</option>
@@ -1154,7 +1159,7 @@ const AdvancedSearchView = ({ arsipList, ...props }) => {
                     </div>
                      <div>
                         <label htmlFor="klasifikasi" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Kode Klasifikasi</label>
-                        <select name="klasifikasi" id="klasifikasi" value={filters.klasifikasi} onChange={handleFilterChange} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <select name="klasifikasi" id="klasifikasi" value={filters.klasifikasi} onChange={handleFilterChange} className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                            <option value="semua">Semua Klasifikasi</option>
                            {props.klasifikasiList.sort((a,b) => a.kode.localeCompare(b.kode, undefined, {numeric: true})).map(k => <option key={k.id} value={k.kode}>{k.kode} - {k.deskripsi}</option>)}
                         </select>
@@ -1178,24 +1183,25 @@ const ReportingView = ({ arsipList, klasifikasiList }) => {
 
 const InfoModal = ({ onClose }) => {
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-8 max-w-md w-full relative">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 dark:text-slate-300 dark:hover:text-white"><XCircle size={24} /></button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+            <div className="bg-white rounded-xl shadow-large p-8 max-w-md w-full relative border border-gray-100 animate-slideUp">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors duration-200"><XCircle size={24} /></button>
                 <div className="flex flex-col items-center text-center">
-                    <Archive size={40} className="text-blue-500 dark:text-blue-400 mb-4" />
-                    <h2 className="text-2xl font-bold mb-2 dark:text-white">Aplikasi SIMANTEP</h2>
-                    <p className="text-gray-600 dark:text-slate-300 mb-4">Sistem Informasi Manajemen Kearsipan Terpadu (SIMANTEP) - Aplikasi manajemen arsip digital yang ditenagai oleh React, Vite, Supabase, dan di-hosting di Vercel.</p>
+                    <Archive size={48} className="text-primary-500 mb-4" />
+                    <h2 className="text-2xl font-bold mb-3 text-gray-900">Aplikasi SIMANTEP</h2>
+                    <p className="text-gray-600 mb-2 leading-relaxed">Sistem Informasi Manajemen Kearsipan Terpadu</p>
+                    <p className="text-sm text-gray-500">Aplikasi manajemen arsip digital yang ditenagai oleh React, Vite, Supabase, dan di-hosting di Vercel.</p>
                 </div>
             </div>
         </div>
     );
 };
 
-// Salin komponen yang tidak berubah dari kode asli
+// Komponen NavItem yang sudah diperbarui
 const NavItem = ({ icon, label, active, onClick }) => (
     <button
         onClick={onClick}
-        className={`flex items-center w-full gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${active ? 'bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-white shadow-sm' : 'text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-slate-200'}`}
+        className={`flex items-center w-full gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${active ? 'bg-primary-50 text-primary-600 shadow-soft border border-primary-100' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}
     >
         {icon} <span>{label}</span>
     </button>
@@ -1203,19 +1209,20 @@ const NavItem = ({ icon, label, active, onClick }) => (
 
 const StatCard = ({ icon, title, value, color }) => {
     const colors = {
-        blue: 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300',
-        green: 'bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-300',
-        red: 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-300',
+        blue: 'bg-primary-100 text-primary-600',
+        green: 'bg-green-100 text-green-600',
+        red: 'bg-red-100 text-red-600',
+        primary: 'bg-primary-100 text-primary-600',
     };
     return (
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md dark:border dark:border-slate-700">
+        <div className="bg-white p-6 rounded-xl shadow-soft border border-gray-100 hover:shadow-medium transition-all duration-200">
             <div className="flex items-center gap-5">
-                <div className={`p-3 rounded-full ${colors[color]}`}>
+                <div className={`p-3 rounded-xl ${colors[color] || colors.primary}`}>
                     {icon}
                 </div>
                 <div>
-                    <p className="text-sm text-gray-500 dark:text-slate-400">{title}</p>
-                    <p className="text-3xl font-bold dark:text-white">{value}</p>
+                    <p className="text-sm text-gray-500 font-medium">{title}</p>
+                    <p className="text-3xl font-bold text-gray-900">{value}</p>
                 </div>
             </div>
         </div>
@@ -1268,10 +1275,10 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
             <div>
                 <div className="border-b border-gray-200 dark:border-slate-700 mb-4">
                     <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-                        <button onClick={() => setActiveTab('aktif')} className={`${activeTab === 'aktif' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-slate-400 dark:hover:text-slate-200'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>
+                        <button onClick={() => setActiveTab('aktif')} className={`${activeTab === 'aktif' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>
                             Daftar Arsip Aktif ({activeArchives.length})
                         </button>
-                        <button onClick={() => setActiveTab('inaktif')} className={`${activeTab === 'inaktif' ? 'border-blue-500 text-blue-600 dark:text-blue-400' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-slate-400 dark:hover:text-slate-200'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>
+                        <button onClick={() => setActiveTab('inaktif')} className={`${activeTab === 'inaktif' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>
                             Daftar Arsip Inaktif ({inactiveArchives.length})
                         </button>
                     </nav>
