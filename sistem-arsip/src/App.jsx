@@ -1,18 +1,17 @@
-/*
- * PENTING: Untuk mengatasi error "Could not resolve '@supabase/supabase-js'",
- * Anda HARUS menjalankan perintah berikut di terminal Anda (dalam folder 'sistem-arsip'):
- *
- * npm install @supabase/supabase-js
- *
- * Error ini terjadi karena library Supabase belum ter-install di proyek Anda.
- * Kode di bawah ini sudah benar, tetapi membutuhkan library tersebut untuk bisa berjalan.
- */
 import React, { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import InputField from './InputField';
+import { AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
 import useAppStore from './store/useAppStore';
-import { useDebounce, useDebouncedCallback } from './hooks/useDebounce';
+
+// UI Components
+import {
+  Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter,
+  Button, Badge, Input, Modal, ModalHeader, ModalTitle, ModalContent, ModalFooter,
+  Sidebar, Header, StatCard, Table, TableHeader, TableBody, TableHead, TableRow, TableCell
+} from './components/ui';
+
+// Legacy Components (will be updated)
 import { 
   ArsipSkeleton, 
   KlasifikasiSkeleton, 
@@ -27,8 +26,15 @@ import LoadingSpinner, {
   CardSpinner 
 } from './components/LoadingSpinner';
 
+// Charts and Icons
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { LayoutDashboard, Archive, FilePlus, FolderKanban, Bell, Search, Trash2, Edit, XCircle, LogOut, Info, FileDown, Layers, Filter, X, Paperclip, FileText, CheckCircle, AlertCircle, ChevronRight, Home } from 'lucide-react';
+import { 
+  LayoutDashboard, Archive, FilePlus, FolderKanban, Bell, Search, Trash2, Edit, 
+  XCircle, LogOut, Info, FileDown, Layers, Filter, X, Paperclip, FileText, 
+  CheckCircle, AlertCircle, ChevronRight, Home, Plus, Download, Upload,
+  Calendar, Clock, User, Eye, Bookmark
+} from 'lucide-react';
+
 import DevIndicator from './components/DevIndicator.jsx'
 import './animations.css'
 
@@ -71,19 +77,10 @@ const ConfigurationMessage = () => (
 );
 
 // --- Fungsi Helper ---
-const toTitleCase = (str) => {
-  if (!str) return '';
-  return str.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-};
 
 // --- Komponen Utama Aplikasi ---
 export default function App() {
-    // Cek konfigurasi environment variables
-    if (!isValidConfig) {
-        return <ConfigurationMessage />;
-    }
-
-    // --- State Management ---
+    // --- State Management (must be at the top before any conditional logic) ---
     const [currentView, setCurrentView] = useState('dashboard');
     
     // Zustand store for optimistic updates
@@ -93,8 +90,7 @@ export default function App() {
         isLoading: storeLoading,
         setArsipList,
         setKlasifikasiList,
-        setIsLoading: setStoreLoading,
-        isItemLoading
+        setIsLoading: setStoreLoading
     } = useAppStore();
     const [editingArsip, setEditingArsip] = useState(null);
     const [editingKlasifikasi, setEditingKlasifikasi] = useState(null);
@@ -108,6 +104,14 @@ export default function App() {
     const [searchResults, setSearchResults] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showSearchResults, setShowSearchResults] = useState(false);
+    
+    // Sidebar state
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+    // Cek konfigurasi environment variables
+    if (!isValidConfig) {
+        return <ConfigurationMessage />;
+    }
 
     // --- Search Functionality ---
     const performSearch = async (query) => {
@@ -274,8 +278,8 @@ export default function App() {
                 duration: 3000,
                 position: 'top-right',
                 style: {
-                    background: isDarkMode ? '#1E293B' : '#F8FAFC',
-                    color: isDarkMode ? '#F1F5F9' : '#1E293B',
+                    background: '#F8FAFC',
+                    color: '#1E293B',
                     borderRadius: '8px',
                     boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                 },
@@ -316,6 +320,7 @@ export default function App() {
         if (view !== 'klasifikasi') setEditingKlasifikasi(null);
     };
 
+    // Move useMemo outside of any conditional logic
     const { activeArchives, inactiveArchives, archivesByYear } = useMemo(() => {
         const today = new Date();
         const active = [];
@@ -378,147 +383,97 @@ export default function App() {
         }
     };
 
+    const navigationItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, view: 'dashboard' },
+        { id: 'tambah', label: 'Tambah Arsip', icon: FilePlus, view: 'tambah' },
+        { id: 'semua', label: 'Semua Arsip', icon: Layers, view: 'semua' },
+        { id: 'klasifikasi', label: 'Kode Klasifikasi', icon: FolderKanban, view: 'klasifikasi' },
+        { id: 'cari', label: 'Pencarian Lanjutan', icon: Search, view: 'cari' },
+        { id: 'laporan', label: 'Laporan', icon: FileText, view: 'laporan' },
+    ];
+
     return (
         <>
-        <div className="bg-gray-50 min-h-screen font-sans text-gray-900 transition-all duration-300">
-                <div className="flex flex-col lg:flex-row">
-                    <aside className="bg-white w-full lg:w-72 lg:min-h-screen p-6 border-r border-gray-200 shadow-soft">
-                        <div className="flex items-center gap-3 mb-10">
-                            <div className="p-2 bg-primary-500 rounded-xl">
-                                <Archive className="text-white" size={28} />
-                            </div>
-                            <div>
-                                <h1 className="text-xl font-bold text-gray-900">SIMANTEP</h1>
-                                <span className="text-xs text-gray-500 font-medium">Sistem Arsip Digital</span>
-                            </div>
-                        </div>
-                        <nav className="flex flex-row lg:flex-col gap-3">
-                            <NavItem icon={<LayoutDashboard size={20} />} label="Dashboard" active={currentView === 'dashboard'} onClick={() => navigate('dashboard')} />
-                            <NavItem icon={<FilePlus size={20} />} label="Tambah Arsip" active={currentView === 'tambah'} onClick={() => navigate('tambah')} />
-                            <NavItem icon={<Layers size={20} />} label="Semua Arsip" active={currentView === 'semua'} onClick={() => navigate('semua')} />
-                            <NavItem icon={<FolderKanban size={20} />} label="Kode Klasifikasi" active={currentView === 'klasifikasi'} onClick={() => navigate('klasifikasi')} />
-                            <NavItem icon={<Search size={20} />} label="Pencarian Lanjutan" active={currentView === 'cari'} onClick={() => navigate('cari')} />
-                            <NavItem icon={<FileText size={20} />} label="Laporan" active={currentView === 'laporan'} onClick={() => navigate('laporan')} />
-                        </nav>
-                         <div className="mt-auto pt-8 hidden lg:block">
-                            <button onClick={() => setShowInfoModal(true)} className="w-full flex items-center gap-3 text-sm text-gray-500 hover:text-primary-600 hover:bg-primary-50 p-3 rounded-xl transition-all duration-200">
-                                <Info size={18} />
-                                <span>Tentang Aplikasi</span>
-                            </button>
-                        </div>
-                    </aside>
+        <div className="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen font-sans text-gray-900">
+            <div className="flex">
+                <Sidebar 
+                    collapsed={sidebarCollapsed}
+                    onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    navigationItems={navigationItems}
+                    currentView={currentView}
+                    onNavigate={navigate}
+                    onShowInfo={() => setShowInfoModal(true)}
+                />
+                
+                <div className="flex-1 flex flex-col min-h-screen">
+                    <Header 
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        searchResults={searchResults}
+                        showSearchResults={showSearchResults}
+                        isSearching={isSearching}
+                        onSearchResultClick={(result) => {
+                            if (result.type === 'arsip') {
+                                navigate('semua');
+                            } else {
+                                navigate('klasifikasi');
+                            }
+                            setShowSearchResults(false);
+                            setSearchQuery('');
+                        }}
+                        onCloseSearch={() => {
+                            setShowSearchResults(false);
+                            setSearchQuery('');
+                        }}
+                        currentView={currentView}
+                        sidebarCollapsed={sidebarCollapsed}
+                    />
 
-                    <main className="flex-1 p-6 lg:p-8 relative">
+                    <main className="flex-1 p-6 overflow-auto">
                         {import.meta.env.DEV && <DevIndicator />}
                         
-                        {/* Header with Breadcrumbs and Search */}
-                        <div className="mb-8 space-y-6">
-                            {/* Breadcrumbs */}
-                            <nav className="flex items-center space-x-2 text-sm text-gray-500 bg-white px-4 py-3 rounded-xl shadow-soft border border-gray-100">
-                                <Home size={16} className="text-primary-500" />
-                                <ChevronRight size={14} className="text-gray-300" />
-                                <span className="capitalize font-medium text-gray-900">
-                                    {currentView === 'dashboard' ? 'Dashboard' :
-                                     currentView === 'arsip' ? 'Daftar Arsip' :
-                                     currentView === 'tambah' ? 'Tambah Arsip' :
-                                     currentView === 'klasifikasi' ? 'Kode Klasifikasi' :
-                                     currentView === 'laporan' ? 'Laporan' : 'Dashboard'}
-                                </span>
-                            </nav>
-                            
-                            {/* Global Search Bar */}
-                            <div className="relative search-container">
-                                <div className="relative">
-                                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-                                    <input
-                                        type="text"
-                                        placeholder="Cari arsip, klasifikasi, nomor surat..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl shadow-soft focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-400 hover:border-gray-300"
-                                    />
-                                    {isSearching && (
-                                        <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-500"></div>
-                                        </div>
-                                    )}
-                                </div>
-                                
-                                {/* Search Results Dropdown */}
-                                {showSearchResults && searchResults.length > 0 && (
-                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-large z-50 max-h-96 overflow-y-auto animate-slideDown">
-                                        <div className="p-3">
-                                            <div className="text-xs text-gray-500 px-3 py-2 font-medium bg-gray-50 rounded-lg mb-2">
-                                                {searchResults.length} hasil ditemukan
-                                            </div>
-                                            {searchResults.map((result, index) => (
-                                                <div
-                                                    key={`${result.type}-${result.id}`}
-                                                    className="p-4 hover:bg-primary-50 rounded-xl cursor-pointer transition-all duration-200 border border-transparent hover:border-primary-100 mb-2 last:mb-0"
-                                                    onClick={() => {
-                                                        if (result.type === 'arsip') {
-                                                            navigate('semua');
-                                                        } else {
-                                                            navigate('klasifikasi');
-                                                        }
-                                                        setShowSearchResults(false);
-                                                        setSearchQuery('');
-                                                    }}
-                                                >
-                                                    <div className="flex items-start gap-3">
-                                                        <div className="flex-shrink-0 mt-1">
-                                                            {result.type === 'arsip' ? (
-                                                                <FileText className="text-primary-600" size={18} />
-                                                            ) : (
-                                                                <FolderKanban className="text-green-600" size={18} />
-                                                            )}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="text-sm font-medium text-gray-900 truncate">
-                                                                    {result.type === 'arsip' ? result.perihal : result.nama}
-                                                                </span>
-                                                                <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                                                                    result.type === 'arsip' ? 'bg-primary-100 text-primary-700' : 'bg-green-100 text-green-700'
-                                                                }`}>
-                                                                    {result.type === 'arsip' ? 'Arsip' : 'Klasifikasi'}
-                                                                </span>
-                                                            </div>
-                                                            <div className="text-xs text-gray-500">
-                                                                {result.type === 'arsip' ? (
-                                                                    <span>{result.nomorSurat} • {result.kodeKlasifikasi}</span>
-                                                                ) : (
-                                                                    <span>Kode: {result.kode}</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                                
-                                {/* No Results */}
-                                {showSearchResults && searchResults.length === 0 && searchQuery.trim() && (
-                                    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-large z-50 animate-slideDown">
-                                        <div className="p-8 text-center">
-                                            <Search className="mx-auto text-gray-400 mb-3" size={28} />
-                                            <p className="text-sm text-gray-600 font-medium">Tidak ada hasil untuk "{searchQuery}"</p>
-                                            <p className="text-xs text-gray-400 mt-1">Coba gunakan kata kunci yang berbeda</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                        <div className="max-w-7xl mx-auto">
+                            {renderView() || (
+                                <Card className="p-8 text-center">
+                                    <CardContent>
+                                        <AlertCircle className="mx-auto text-gray-400 mb-4" size={48} />
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-2">Halaman Tidak Ditemukan</h3>
+                                        <p className="text-gray-500">Halaman yang Anda cari tidak tersedia.</p>
+                                    </CardContent>
+                                </Card>
+                            )}
                         </div>
-                        
-                        {renderView() || <div className="p-8 bg-white rounded-xl shadow-soft border border-gray-100">Halaman tidak ditemukan.</div>}
                     </main>
                 </div>
-                {showInfoModal && <InfoModal onClose={() => setShowInfoModal(false)} />}
-                <Toaster />
-                {deleteConfirmModal.show && <DeleteConfirmModal message={deleteConfirmModal.message} onConfirm={confirmDelete} onCancel={() => setDeleteConfirmModal({ show: false, id: null, message: '' })} />}
             </div>
+            
+            <AnimatePresence>
+                {showInfoModal && (
+                    <InfoModal onClose={() => setShowInfoModal(false)} />
+                )}
+                {deleteConfirmModal.show && (
+                    <DeleteConfirmModal 
+                        message={deleteConfirmModal.message} 
+                        onConfirm={confirmDelete} 
+                        onCancel={() => setDeleteConfirmModal({ show: false, id: null, message: '' })} 
+                    />
+                )}
+            </AnimatePresence>
+            
+            <Toaster 
+                position="top-right"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#fff',
+                        color: '#374151',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '12px',
+                    },
+                }}
+            />
+        </div>
         </>
     );
 }
@@ -574,7 +529,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
     });
     const [file, setFile] = useState(null);
     const [existingFile, setExistingFile] = useState({ fileName: '', filePath: '' });
-    const [uploadProgress, setUploadProgress] = useState(0); // Note: Supabase JS v2 doesn't support progress yet
+    // Note: uploadProgress removed as it's not used in current implementation
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
@@ -1207,27 +1162,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
     </button>
 );
 
-const StatCard = ({ icon, title, value, color }) => {
-    const colors = {
-        blue: 'bg-primary-100 text-primary-600',
-        green: 'bg-green-100 text-green-600',
-        red: 'bg-red-100 text-red-600',
-        primary: 'bg-primary-100 text-primary-600',
-    };
-    return (
-        <div className="bg-white p-6 rounded-xl shadow-soft border border-gray-100 hover:shadow-medium transition-all duration-200">
-            <div className="flex items-center gap-5">
-                <div className={`p-3 rounded-xl ${colors[color] || colors.primary}`}>
-                    {icon}
-                </div>
-                <div>
-                    <p className="text-sm text-gray-500 font-medium">{title}</p>
-                    <p className="text-3xl font-bold text-gray-900">{value}</p>
-                </div>
-            </div>
-        </div>
-    );
-};
+
 
 const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ...props }) => {
     const [activeTab, setActiveTab] = useState('aktif');
@@ -1237,10 +1172,30 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
     // Show skeleton if data is still loading
     const isDataLoading = !stats || stats.total === undefined;
 
+    const statCards = [
+        { icon: Archive, title: "Total Arsip", value: stats?.total || 0, color: "blue", trend: "+12%" },
+        { icon: CheckCircle, title: "Arsip Aktif", value: stats?.active || 0, color: "green", trend: "+8%" },
+        { icon: AlertCircle, title: "Arsip Inaktif", value: stats?.inactive || 0, color: "red", trend: "-3%" }
+    ];
+
     return (
-        <div>
-            <h2 className="text-3xl font-bold mb-6 dark:text-white">Dashboard</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="space-y-8">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+                    <p className="text-gray-600 dark:text-gray-400 mt-1">Selamat datang di Sistem Arsip Digital</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                    <Badge variant="success" className="px-3 py-1">
+                        <Clock size={14} className="mr-1" />
+                        Live Data
+                    </Badge>
+                </div>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {isDataLoading ? (
                     <>
                         <StatCardSkeleton />
@@ -1248,44 +1203,172 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
                         <StatCardSkeleton />
                     </>
                 ) : (
-                    <>
-                        <StatCard icon={<Archive size={28} />} title="Total Arsip" value={stats.total} color="blue" />
-                        <StatCard icon={<Archive size={28} />} title="Arsip Aktif" value={stats.active} color="green" />
-                        <StatCard icon={<Bell size={28} />} title="Arsip Inaktif" value={stats.inactive} color="red" />
-                    </>
+                    statCards.map((card, index) => (
+                        <div key={card.title}>
+                            <StatCard {...card} />
+                        </div>
+                    ))
                 )}
             </div>
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md dark:border dark:border-slate-700 mb-8">
-                <h3 className="text-lg font-semibold mb-4 dark:text-white">Volume Arsip per Tahun</h3>
-                {archivesByYear.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={archivesByYear} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.3)" />
-                            <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'currentColor' }} />
-                            <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: 'currentColor' }} />
-                            <Tooltip contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.9)', border: '1px solid #475569', borderRadius: '8px' }} itemStyle={{ color: '#cbd5e1' }} labelStyle={{ color: '#f1f5f9', fontWeight: 'bold' }} />
-                            <Legend wrapperStyle={{ fontSize: '14px' }} />
-                            <Bar dataKey="Aktif" stackId="a" fill="#22c55e" name="Aktif" radius={[4, 4, 0, 0]} />
-                            <Bar dataKey="Inaktif" stackId="a" fill="#ef4444" name="Inaktif" radius={[4, 4, 0, 0]} />
-                        </BarChart>
-                    </ResponsiveContainer>
-                ) : <div className="text-center py-12 text-gray-500 dark:text-slate-400">Belum ada data arsip untuk ditampilkan di grafik.</div>}
-            </div>
+
+            {/* Chart Card */}
+            <Card className="overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="flex items-center gap-2">
+                                <BarChart size={20} className="text-blue-600" />
+                                Volume Arsip per Tahun
+                            </CardTitle>
+                            <CardDescription>
+                                Distribusi arsip berdasarkan tahun pembuatan
+                            </CardDescription>
+                        </div>
+                        <Badge variant="outline" className="bg-white/50">
+                            {archivesByYear.length} Tahun
+                        </Badge>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    {archivesByYear.length > 0 ? (
+                        <div>
+                            <ResponsiveContainer width="100%" height={350}>
+                                <BarChart data={archivesByYear} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.3)" />
+                                    <XAxis 
+                                        dataKey="name" 
+                                        tick={{ fontSize: 12, fill: 'currentColor' }}
+                                        axisLine={{ stroke: 'rgba(148, 163, 184, 0.5)' }}
+                                    />
+                                    <YAxis 
+                                        allowDecimals={false} 
+                                        tick={{ fontSize: 12, fill: 'currentColor' }}
+                                        axisLine={{ stroke: 'rgba(148, 163, 184, 0.5)' }}
+                                    />
+                                    <Tooltip 
+                                        contentStyle={{ 
+                                            backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+                                            border: '1px solid rgba(148, 163, 184, 0.2)', 
+                                            borderRadius: '12px',
+                                            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+                                        }} 
+                                        itemStyle={{ color: '#374151', fontWeight: '500' }} 
+                                        labelStyle={{ color: '#111827', fontWeight: 'bold' }} 
+                                    />
+                                    <Legend wrapperStyle={{ fontSize: '14px', paddingTop: '20px' }} />
+                                    <Bar 
+                                        dataKey="Aktif" 
+                                        stackId="a" 
+                                        fill="url(#greenGradient)" 
+                                        name="Aktif" 
+                                        radius={[4, 4, 0, 0]} 
+                                    />
+                                    <Bar 
+                                        dataKey="Inaktif" 
+                                        stackId="a" 
+                                        fill="url(#redGradient)" 
+                                        name="Inaktif" 
+                                        radius={[4, 4, 0, 0]} 
+                                    />
+                                    <defs>
+                                        <linearGradient id="greenGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#10b981" />
+                                            <stop offset="100%" stopColor="#059669" />
+                                        </linearGradient>
+                                        <linearGradient id="redGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#ef4444" />
+                                            <stop offset="100%" stopColor="#dc2626" />
+                                        </linearGradient>
+                                    </defs>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-16 text-gray-500 dark:text-gray-400">
+                            <Archive size={48} className="mb-4 opacity-50" />
+                            <p className="text-lg font-medium mb-2">Belum ada data arsip</p>
+                            <p className="text-sm">Data akan muncul setelah Anda menambahkan arsip pertama</p>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
             
-            <div>
-                <div className="border-b border-gray-200 dark:border-slate-700 mb-4">
-                    <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-                        <button onClick={() => setActiveTab('aktif')} className={`${activeTab === 'aktif' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>
-                            Daftar Arsip Aktif ({activeArchives.length})
-                        </button>
-                        <button onClick={() => setActiveTab('inaktif')} className={`${activeTab === 'inaktif' ? 'border-primary-500 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>
-                            Daftar Arsip Inaktif ({inactiveArchives.length})
-                        </button>
-                    </nav>
-                </div>
-                {activeTab === 'aktif' && <ArsipList {...props} title="Daftar Arsip Aktif" arsipList={activeArchives} setEditingArsip={(a) => { setEditingArsip(a); navigate('tambah'); }} listType="aktif" />}
-                {activeTab === 'inaktif' && <ArsipList {...props} title="Daftar Arsip Inaktif" arsipList={inactiveArchives} setEditingArsip={(a) => { setEditingArsip(a); navigate('tambah'); }} listType="inaktif" />}
-            </div>
+            {/* Archive Lists */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Layers size={20} className="text-indigo-600" />
+                        Daftar Arsip
+                    </CardTitle>
+                    <CardDescription>
+                        Kelola dan lihat arsip berdasarkan status
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                    <div className="border-b border-gray-200 dark:border-gray-700">
+                        <nav className="flex space-x-8 px-6" aria-label="Tabs">
+                            <button 
+                                onClick={() => setActiveTab('aktif')} 
+                                className={`${
+                                    activeTab === 'aktif' 
+                                        ? 'border-blue-500 text-blue-600 bg-blue-50 dark:bg-blue-900/20' 
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                } whitespace-nowrap py-4 px-4 border-b-2 font-medium text-sm rounded-t-lg transition-all duration-200`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <CheckCircle size={16} />
+                                    Arsip Aktif
+                                    <Badge variant={activeTab === 'aktif' ? 'default' : 'secondary'} className="ml-1">
+                                        {activeArchives.length}
+                                    </Badge>
+                                </div>
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('inaktif')} 
+                                className={`${
+                                    activeTab === 'inaktif' 
+                                        ? 'border-red-500 text-red-600 bg-red-50 dark:bg-red-900/20' 
+                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                } whitespace-nowrap py-4 px-4 border-b-2 font-medium text-sm rounded-t-lg transition-all duration-200`}
+                            >
+                                <div className="flex items-center gap-2">
+                                    <AlertCircle size={16} />
+                                    Arsip Inaktif
+                                    <Badge variant={activeTab === 'inaktif' ? 'destructive' : 'secondary'} className="ml-1">
+                                        {inactiveArchives.length}
+                                    </Badge>
+                                </div>
+                            </button>
+                        </nav>
+                    </div>
+                    <div className="p-6">
+                        <AnimatePresence mode="wait">
+                            {activeTab === 'aktif' && (
+                                <div key="aktif">
+                                    <ArsipList 
+                                        {...props} 
+                                        title="Daftar Arsip Aktif" 
+                                        arsipList={activeArchives} 
+                                        setEditingArsip={(a) => { setEditingArsip(a); navigate('tambah'); }} 
+                                        listType="aktif" 
+                                    />
+                                </div>
+                            )}
+                            {activeTab === 'inaktif' && (
+                                <div key="inaktif">
+                                    <ArsipList 
+                                        {...props} 
+                                        title="Daftar Arsip Inaktif" 
+                                        arsipList={inactiveArchives} 
+                                        setEditingArsip={(a) => { setEditingArsip(a); navigate('tambah'); }} 
+                                        listType="inaktif" 
+                                    />
+                                </div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 };
