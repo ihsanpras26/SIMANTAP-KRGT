@@ -12,7 +12,7 @@ import { createClient } from '@supabase/supabase-js';
 import InputField from './InputField';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { LayoutDashboard, Archive, FilePlus, FolderKanban, Bell, Search, Trash2, Edit, XCircle, LogOut, Info, Sun, Moon, FileDown, Layers, Filter, X, Paperclip, FileText } from 'lucide-react';
+import { LayoutDashboard, Archive, FilePlus, FolderKanban, Bell, Search, Trash2, Edit, XCircle, LogOut, Info, Sun, Moon, FileDown, Layers, Filter, X, Paperclip, FileText, CheckCircle, AlertCircle } from 'lucide-react';
 
 // --- Konfigurasi Supabase ---
 // Pastikan Anda membuat file .env dan mengisinya
@@ -39,6 +39,7 @@ export default function App() {
     const [showInfoModal, setShowInfoModal] = useState(false);
     const [isDarkMode, setIsDarkMode] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
 
     // --- Efek untuk Mengambil Data Awal & Berlangganan Perubahan ---
     useEffect(() => {
@@ -64,8 +65,17 @@ export default function App() {
         const arsipChannel = supabase.channel('public:arsip')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'arsip' }, 
                 (payload) => {
-                    console.log('Perubahan diterima!', payload);
-                    fetchData(); // Ambil ulang semua data saat ada perubahan
+                    console.log('Perubahan arsip diterima!', payload);
+                    
+                    if (payload.eventType === 'INSERT') {
+                        setArsipList(prev => [payload.new, ...prev]);
+                    } else if (payload.eventType === 'UPDATE') {
+                        setArsipList(prev => prev.map(item => 
+                            item.id === payload.new.id ? payload.new : item
+                        ));
+                    } else if (payload.eventType === 'DELETE') {
+                        setArsipList(prev => prev.filter(item => item.id !== payload.old.id));
+                    }
                 }
             )
             .subscribe();
@@ -74,8 +84,17 @@ export default function App() {
         const klasifikasiChannel = supabase.channel('public:klasifikasi')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'klasifikasi' }, 
                 (payload) => {
-                    console.log('Perubahan diterima!', payload);
-                    fetchData(); // Ambil ulang semua data saat ada perubahan
+                    console.log('Perubahan klasifikasi diterima!', payload);
+                    
+                    if (payload.eventType === 'INSERT') {
+                        setKlasifikasiList(prev => [...prev, payload.new].sort((a, b) => a.kode.localeCompare(b.kode, undefined, { numeric: true })));
+                    } else if (payload.eventType === 'UPDATE') {
+                        setKlasifikasiList(prev => prev.map(item => 
+                            item.id === payload.new.id ? payload.new : item
+                        ).sort((a, b) => a.kode.localeCompare(b.kode, undefined, { numeric: true })));
+                    } else if (payload.eventType === 'DELETE') {
+                        setKlasifikasiList(prev => prev.filter(item => item.id !== payload.old.id));
+                    }
                 }
             )
             .subscribe();
@@ -87,6 +106,14 @@ export default function App() {
         };
     }, []);
     
+    // --- Fungsi Notifikasi ---
+    const showNotification = (message, type = 'success') => {
+        setNotification({ show: true, message, type });
+        setTimeout(() => {
+            setNotification({ show: false, message: '', type: 'success' });
+        }, 4000);
+    };
+
     // --- Fungsi Navigasi ---
     const navigate = (view) => {
         setCurrentView(view);
@@ -129,7 +156,7 @@ export default function App() {
     }
 
     const renderView = () => {
-        const props = { supabase, klasifikasiList, setEditingArsip, editingKlasifikasi, setEditingKlasifikasi, navigate, arsipList, activeArchives, inactiveArchives };
+        const props = { supabase, klasifikasiList, setEditingArsip, editingKlasifikasi, setEditingKlasifikasi, navigate, arsipList, activeArchives, inactiveArchives, showNotification };
         switch (currentView) {
             case 'tambah':
                 return <ArsipForm {...props} arsipToEdit={editingArsip} onFinish={() => navigate('dashboard')} />;
@@ -180,14 +207,38 @@ export default function App() {
                     </main>
                 </div>
                 {showInfoModal && <InfoModal onClose={() => setShowInfoModal(false)} />}
+                {notification.show && <Toast message={notification.message} type={notification.type} onClose={() => setNotification({ show: false, message: '', type: 'success' })} />}
             </div>
         </div>
     );
 }
 
-// --- Komponen-komponen Anak (Sebagian besar tidak berubah, kecuali yang berinteraksi dengan data) ---
+// --- Komponen Toast untuk Notifikasi ---
+const Toast = ({ message, type, onClose }) => {
+    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+    const icon = type === 'success' ? <CheckCircle size={20} /> : type === 'error' ? <AlertCircle size={20} /> : <Info size={20} />;
+    
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onClose();
+        }, 4000);
+        return () => clearTimeout(timer);
+    }, [onClose]);
+    
+    return (
+        <div className="fixed top-4 right-4 z-50 transform transition-all duration-300 ease-in-out animate-pulse">
+            <div className={`${bgColor} text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 min-w-80 max-w-md border-l-4 border-white/30`}>
+                {icon}
+                <span className="flex-1 font-medium">{message}</span>
+                <button onClick={onClose} className="text-white/80 hover:text-white transition-colors ml-2">
+                    <X size={18} />
+                </button>
+            </div>
+        </div>
+    );
+};
 
-const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish }) => {
+const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotification }) => {
     const [formData, setFormData] = useState({
         nomorSurat: '',
         tanggalSurat: '',
@@ -229,7 +280,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (formData.kodeKlasifikasi.length <= 3) {
-            alert("Kode klasifikasi harus lebih spesifik.");
+            showNotification("Kode klasifikasi harus lebih spesifik.", 'error');
             return;
         }
         setIsLoading(true);
@@ -252,7 +303,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish }) => {
 
             if (uploadError) {
                 console.error("Upload failed:", uploadError);
-                alert(`Gagal mengunggah file: ${uploadError.message}`);
+                showNotification(`Gagal mengunggah file: ${uploadError.message}`, 'error');
                 setIsLoading(false);
                 return;
             }
@@ -284,15 +335,17 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish }) => {
                 // Update data
                 const { error } = await supabase.from('arsip').update(dataToSave).eq('id', arsipToEdit.id);
                 if (error) throw error;
+                showNotification('Data arsip berhasil diperbarui!', 'success');
             } else {
                 // Insert data baru
                 const { error } = await supabase.from('arsip').insert([dataToSave]);
                 if (error) throw error;
+                showNotification('Data arsip berhasil disimpan!', 'success');
             }
             onFinish();
         } catch (error) {
             console.error("Error saving document:", error);
-            alert(`Gagal menyimpan data: ${error.message}`);
+            showNotification(`Gagal menyimpan data: ${error.message}`, 'error');
         } finally {
             setIsLoading(false);
         }
@@ -376,7 +429,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish }) => {
 // Sisa komponen (NavItem, StatCard, Dashboard, dll.) tetap sama, hanya perlu passing props 'supabase'
 // ... (Saya akan menyalin komponen lainnya dengan modifikasi yang diperlukan)
 
-const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, setEditingKlasifikasi }) => {
+const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, setEditingKlasifikasi, showNotification }) => {
     // ... (JSX sama, hanya logic handler yang berubah)
     const handleEdit = (klasifikasi) => {
         setEditingKlasifikasi(klasifikasi);
@@ -388,9 +441,10 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
             try {
                 const { error } = await supabase.from('klasifikasi').delete().eq('id', id);
                 if (error) throw error;
+                showNotification('Kode klasifikasi berhasil dihapus!', 'success');
             } catch (error) {
                 console.error("Error deleting klasifikasi:", error);
-                alert("Gagal menghapus kode klasifikasi.");
+                showNotification(`Gagal menghapus kode klasifikasi: ${error.message}`, 'error');
             }
         }
     };
@@ -440,14 +494,15 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                 <KlasifikasiForm 
                     supabase={supabase}
                     klasifikasiToEdit={editingKlasifikasi} 
-                    onFinish={() => setEditingKlasifikasi(null)} 
+                    onFinish={() => setEditingKlasifikasi(null)}
+                    showNotification={showNotification}
                 />
             </div>
         </div>
     );
 };
 
-const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish }) => {
+const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotification }) => {
     const [formData, setFormData] = useState({
         kode: '',
         deskripsi: '',
@@ -490,14 +545,16 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish }) => {
             if (klasifikasiToEdit) {
                 const { error } = await supabase.from('klasifikasi').update(dataToSave).eq('id', klasifikasiToEdit.id);
                 if (error) throw error;
+                showNotification('Kode klasifikasi berhasil diperbarui!', 'success');
             } else {
                 const { error } = await supabase.from('klasifikasi').insert([dataToSave]);
                 if (error) throw error;
+                showNotification('Kode klasifikasi berhasil ditambahkan!', 'success');
             }
             onFinish();
         } catch (error) {
             console.error("Error saving klasifikasi: ", error);
-            alert("Gagal menyimpan data klasifikasi.");
+            showNotification(`Gagal menyimpan data klasifikasi: ${error.message}`, 'error');
         } finally {
             setIsLoading(false);
         }
