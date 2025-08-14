@@ -71,7 +71,10 @@ export default function App() {
     const [editingArsip, setEditingArsip] = useState(null);
     const [editingKlasifikasi, setEditingKlasifikasi] = useState(null);
     const [showInfoModal, setShowInfoModal] = useState(false);
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    const [isDarkMode, setIsDarkMode] = useState(() => {
+        const saved = localStorage.getItem('darkMode');
+        return saved ? JSON.parse(saved) : false;
+    });
     const [isLoading, setIsLoading] = useState(true);
     const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
     const [deleteConfirmModal, setDeleteConfirmModal] = useState({ show: false, id: null, message: '' });
@@ -104,12 +107,15 @@ export default function App() {
                     
                     if (payload.eventType === 'INSERT') {
                         setArsipList(prev => [payload.new, ...prev]);
+                        showNotification('Data arsip baru ditambahkan!', 'success');
                     } else if (payload.eventType === 'UPDATE') {
                         setArsipList(prev => prev.map(item => 
                             item.id === payload.new.id ? payload.new : item
                         ));
+                        showNotification('Data arsip diperbarui!', 'success');
                     } else if (payload.eventType === 'DELETE') {
                         setArsipList(prev => prev.filter(item => item.id !== payload.old.id));
+                        showNotification('Data arsip dihapus!', 'success');
                     }
                 }
             )
@@ -123,12 +129,15 @@ export default function App() {
                     
                     if (payload.eventType === 'INSERT') {
                         setKlasifikasiList(prev => [...prev, payload.new].sort((a, b) => a.kode.localeCompare(b.kode, undefined, { numeric: true })));
+                        // Tidak tampilkan notifikasi untuk INSERT karena sudah ada di form
                     } else if (payload.eventType === 'UPDATE') {
                         setKlasifikasiList(prev => prev.map(item => 
                             item.id === payload.new.id ? payload.new : item
                         ).sort((a, b) => a.kode.localeCompare(b.kode, undefined, { numeric: true })));
+                        // Tidak tampilkan notifikasi untuk UPDATE karena sudah ada di form
                     } else if (payload.eventType === 'DELETE') {
                         setKlasifikasiList(prev => prev.filter(item => item.id !== payload.old.id));
+                        // Notifikasi delete sudah ditangani di confirmDelete
                     }
                 }
             )
@@ -248,7 +257,11 @@ export default function App() {
                     <main className="flex-1 p-4 sm:p-6 lg:p-8 relative">
                         {import.meta.env.DEV && <DevIndicator />}
                         <div className="absolute top-4 right-4 z-10">
-                            <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-full bg-white dark:bg-slate-700 shadow-md hover:bg-gray-100 dark:hover:bg-slate-600 transition-all">
+                            <button onClick={() => {
+                                const newMode = !isDarkMode;
+                                setIsDarkMode(newMode);
+                                localStorage.setItem('darkMode', JSON.stringify(newMode));
+                            }} className="p-2 rounded-full bg-white dark:bg-slate-700 shadow-md hover:bg-gray-100 dark:hover:bg-slate-600 transition-all">
                                 {isDarkMode ? <Sun size={20} className="text-yellow-400" /> : <Moon size={20} className="text-blue-600" />}
                             </button>
                         </div>
@@ -440,7 +453,12 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             ...main,
             subItems: sortedList.filter(sub => sub.kode.startsWith(main.kode + '.') && sub.kode.length > 3)
         }));
-        return grouped;
+        // Tambahkan item yang tidak memiliki kategori utama
+        const orphanItems = sortedList.filter(item => {
+            const hasParent = mainCategories.some(main => item.kode.startsWith(main.kode + '.'));
+            return !hasParent && item.kode.length > 3;
+        });
+        return [...grouped, ...orphanItems.map(item => ({ ...item, subItems: [] }))];
     }, [klasifikasiList]);
 
     return (
@@ -456,19 +474,32 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                     <label htmlFor="kodeKlasifikasi" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Kode Klasifikasi</label>
                     <select id="kodeKlasifikasi" name="kodeKlasifikasi" value={formData.kodeKlasifikasi} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
                         <option value="">Pilih Kode Klasifikasi</option>
-                        {groupedKlasifikasi.map(group => (
-                            <optgroup key={group.id} label={`${group.kode} - ${group.deskripsi}`}>
-                                {group.subItems.map(item => {
-                                     const indentationLevel = item.kode.split('.').length - 1;
-                                     const indentString = '\u00A0\u00A0'.repeat(indentationLevel);
-                                     return (
-                                        <option key={item.id} value={item.kode}>
-                                            {indentString}{item.kode} - {item.deskripsi}
+                        {groupedKlasifikasi.map(group => {
+                            if (group.subItems && group.subItems.length > 0) {
+                                return (
+                                    <optgroup key={group.id} label={`${group.kode} - ${group.deskripsi}`}>
+                                        <option key={`main-${group.id}`} value={group.kode}>
+                                            {group.kode} - {group.deskripsi}
                                         </option>
-                                     )
-                                })}
-                            </optgroup>
-                        ))}
+                                        {group.subItems.map(item => {
+                                            const indentationLevel = item.kode.split('.').length - 1;
+                                            const indentString = '\u00A0\u00A0'.repeat(indentationLevel);
+                                            return (
+                                                <option key={item.id} value={item.kode}>
+                                                    {indentString}{item.kode} - {item.deskripsi}
+                                                </option>
+                                            )
+                                        })}
+                                    </optgroup>
+                                );
+                            } else {
+                                return (
+                                    <option key={group.id} value={group.kode}>
+                                        {group.kode} - {group.deskripsi}
+                                    </option>
+                                );
+                            }
+                        })}
                     </select>
                 </div>
                 <div>
@@ -620,12 +651,14 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotificati
                 const { error } = await supabase.from('klasifikasi').update(dataToSave).eq('id', klasifikasiToEdit.id);
                 if (error) throw error;
                 showNotification('Kode klasifikasi berhasil diperbarui!', 'success');
+                onFinish();
             } else {
                 const { error } = await supabase.from('klasifikasi').insert([dataToSave]);
                 if (error) throw error;
                 showNotification('Kode klasifikasi berhasil ditambahkan!', 'success');
+                // Reset form untuk input baru tanpa menutup form
+                setFormData({ kode: '', deskripsi: '', retensiAktif: '', retensiInaktif: '' });
             }
-            onFinish();
         } catch (error) {
             console.error("Error saving klasifikasi: ", error);
             showNotification(`Gagal menyimpan data klasifikasi: ${error.message}`, 'error');
