@@ -10,6 +10,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import InputField from './InputField';
+import toast, { Toaster } from 'react-hot-toast';
+import useAppStore from './store/useAppStore';
+import { useDebounce, useDebouncedCallback } from './hooks/useDebounce';
+import { 
+  ArsipItemSkeleton, 
+  KlasifikasiItemSkeleton, 
+  StatCardSkeleton, 
+  FormSkeleton,
+  ChartSkeleton 
+} from './components/SkeletonLoader';
+import LoadingSpinner, { 
+  ButtonSpinner, 
+  OverlaySpinner, 
+  InlineSpinner, 
+  CardSpinner 
+} from './components/LoadingSpinner';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { LayoutDashboard, Archive, FilePlus, FolderKanban, Bell, Search, Trash2, Edit, XCircle, LogOut, Info, Sun, Moon, FileDown, Layers, Filter, X, Paperclip, FileText, CheckCircle, AlertCircle } from 'lucide-react';
@@ -66,8 +82,17 @@ export default function App() {
 
     // --- State Management ---
     const [currentView, setCurrentView] = useState('dashboard');
-    const [arsipList, setArsipList] = useState([]);
-    const [klasifikasiList, setKlasifikasiList] = useState([]);
+    
+    // Zustand store for optimistic updates
+    const {
+        arsipList,
+        klasifikasiList,
+        isLoading: storeLoading,
+        setArsipList,
+        setKlasifikasiList,
+        setIsLoading: setStoreLoading,
+        isItemLoading
+    } = useAppStore();
     const [editingArsip, setEditingArsip] = useState(null);
     const [editingKlasifikasi, setEditingKlasifikasi] = useState(null);
     const [showInfoModal, setShowInfoModal] = useState(false);
@@ -75,26 +100,25 @@ export default function App() {
         const saved = localStorage.getItem('darkMode');
         return saved ? JSON.parse(saved) : false;
     });
-    const [isLoading, setIsLoading] = useState(true);
-    const [notification, setNotification] = useState({ show: false, message: '', type: 'success' });
+    // Notification state removed - using react-hot-toast instead
     const [deleteConfirmModal, setDeleteConfirmModal] = useState({ show: false, id: null, message: '' });
 
     // --- Efek untuk Mengambil Data Awal & Berlangganan Perubahan ---
     useEffect(() => {
         // Fungsi untuk mengambil data awal
         const fetchData = async () => {
-            setIsLoading(true);
+            setStoreLoading(true);
             // Ambil data arsip
             const { data: arsipData, error: arsipError } = await supabase.from('arsip').select('*').order('tanggalSurat', { ascending: false });
             if (arsipError) console.error("Error fetching arsip:", arsipError);
-            else setArsipList(arsipData);
+            else setArsipList(arsipData || []);
 
             // Ambil data klasifikasi
             const { data: klasifikasiData, error: klasifikasiError } = await supabase.from('klasifikasi').select('*').order('kode', { ascending: true });
             if (klasifikasiError) console.error("Error fetching klasifikasi:", klasifikasiError);
-            else setKlasifikasiList(klasifikasiData);
+            else setKlasifikasiList(klasifikasiData || []);
             
-            setIsLoading(false);
+            setStoreLoading(false);
         };
 
         fetchData();
@@ -150,18 +174,69 @@ export default function App() {
         };
     }, []);
     
-    // --- Fungsi Notifikasi ---
+    // --- Fungsi Notifikasi dengan react-hot-toast ---
     const showNotification = (message, type = 'success') => {
-        setNotification({ show: true, message, type });
-        setTimeout(() => {
-            setNotification({ show: false, message: '', type: 'success' });
-        }, 4000);
+        if (type === 'success') {
+            toast.success(message, {
+                duration: 3000,
+                position: 'top-right',
+                style: {
+                    background: '#10B981',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                },
+                iconTheme: {
+                    primary: '#fff',
+                    secondary: '#10B981',
+                },
+            });
+        } else if (type === 'error') {
+            toast.error(message, {
+                duration: 4000,
+                position: 'top-right',
+                style: {
+                    background: '#EF4444',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                },
+                iconTheme: {
+                    primary: '#fff',
+                    secondary: '#EF4444',
+                },
+            });
+        } else {
+            toast(message, {
+                duration: 3000,
+                position: 'top-right',
+                style: {
+                    background: isDarkMode ? '#1E293B' : '#F8FAFC',
+                    color: isDarkMode ? '#F1F5F9' : '#1E293B',
+                    borderRadius: '8px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                },
+            });
+        }
     };
 
     const confirmDelete = async () => {
+        const { deleteKlasifikasiOptimistic, confirmKlasifikasiDelete, rollbackKlasifikasiDelete } = useAppStore.getState();
+        
+        // Find the original data for potential rollback
+        const originalData = klasifikasiList.find(k => k.id === deleteConfirmModal.id);
+        
         try {
+            // Optimistic delete
+            deleteKlasifikasiOptimistic(deleteConfirmModal.id);
+            
             const { error } = await supabase.from('klasifikasi').delete().eq('id', deleteConfirmModal.id);
-            if (error) throw error;
+            if (error) {
+                rollbackKlasifikasiDelete(originalData);
+                throw error;
+            }
+            
+            confirmKlasifikasiDelete(deleteConfirmModal.id);
             showNotification('Kode klasifikasi berhasil dihapus!', 'success');
             setDeleteConfirmModal({ show: false, id: null, message: '' });
         } catch (error) {
@@ -208,8 +283,15 @@ export default function App() {
         };
     }, [arsipList]);
 
-    if (isLoading) {
-        return <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900"><div className="text-xl font-semibold dark:text-white">Memuat Sistem...</div></div>;
+    if (storeLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-slate-900">
+                <div className="flex flex-col items-center gap-4">
+                    <LoadingSpinner type="ring" size={40} color="#3B82F6" />
+                    <div className="text-xl font-semibold dark:text-white">Memuat Sistem...</div>
+                </div>
+            </div>
+        );
     }
 
     const renderView = () => {
@@ -269,37 +351,14 @@ export default function App() {
                     </main>
                 </div>
                 {showInfoModal && <InfoModal onClose={() => setShowInfoModal(false)} />}
-                {notification.show && <Toast message={notification.message} type={notification.type} onClose={() => setNotification({ show: false, message: '', type: 'success' })} />}
+                <Toaster />
                 {deleteConfirmModal.show && <DeleteConfirmModal message={deleteConfirmModal.message} onConfirm={confirmDelete} onCancel={() => setDeleteConfirmModal({ show: false, id: null, message: '' })} />}
             </div>
         </div>
     );
 }
 
-// --- Komponen Toast untuk Notifikasi ---
-const Toast = ({ message, type, onClose }) => {
-    const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
-    const icon = type === 'success' ? <CheckCircle size={20} /> : type === 'error' ? <AlertCircle size={20} /> : <Info size={20} />;
-    
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            onClose();
-        }, 4000);
-        return () => clearTimeout(timer);
-    }, [onClose]);
-    
-    return (
-        <div className="fixed top-4 right-4 z-50 transform transition-all duration-300 ease-in-out animate-pulse">
-            <div className={`${bgColor} text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 min-w-80 max-w-md border-l-4 border-white/30`}>
-                {icon}
-                <span className="flex-1 font-medium">{message}</span>
-                <button onClick={onClose} className="text-white/80 hover:text-white transition-colors ml-2">
-                    <X size={18} />
-                </button>
-            </div>
-        </div>
-    );
-};
+// Toast component removed - using react-hot-toast instead
 
 // --- Komponen Modal Konfirmasi Delete ---
 const DeleteConfirmModal = ({ message, onConfirm, onCancel }) => {
@@ -331,6 +390,15 @@ const DeleteConfirmModal = ({ message, onConfirm, onCancel }) => {
 };
 
 const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotification }) => {
+    const {
+        addArsipOptimistic,
+        confirmArsipOptimistic,
+        rollbackArsipOptimistic,
+        updateArsipOptimistic,
+        confirmArsipUpdate,
+        rollbackArsipUpdate
+    } = useAppStore();
+    
     const [formData, setFormData] = useState({
         nomorSurat: '',
         tanggalSurat: '',
@@ -423,15 +491,30 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
         };
 
         try {
+            let tempId;
+            const originalData = arsipToEdit ? { ...arsipToEdit } : null;
+            
             if (arsipToEdit) {
-                // Update data
-                const { error } = await supabase.from('arsip').update(dataToSave).eq('id', arsipToEdit.id);
-                if (error) throw error;
+                // Optimistic update for existing arsip
+                updateArsipOptimistic(arsipToEdit.id, dataToSave);
+                
+                const { data, error } = await supabase.from('arsip').update(dataToSave).eq('id', arsipToEdit.id).select().single();
+                if (error) {
+                    rollbackArsipUpdate(arsipToEdit.id, originalData);
+                    throw error;
+                }
+                confirmArsipUpdate(arsipToEdit.id, data);
                 showNotification('Data arsip berhasil diperbarui!', 'success');
             } else {
-                // Insert data baru
-                const { error } = await supabase.from('arsip').insert([dataToSave]);
-                if (error) throw error;
+                // Optimistic insert for new arsip
+                tempId = addArsipOptimistic(dataToSave);
+                
+                const { data, error } = await supabase.from('arsip').insert([dataToSave]).select().single();
+                if (error) {
+                    rollbackArsipOptimistic(tempId);
+                    throw error;
+                }
+                confirmArsipOptimistic(tempId, data);
                 showNotification('Data arsip berhasil disimpan!', 'success');
             }
             onFinish();
@@ -608,6 +691,15 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
 };
 
 const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotification }) => {
+    const {
+        addKlasifikasiOptimistic,
+        confirmKlasifikasiOptimistic,
+        rollbackKlasifikasiOptimistic,
+        updateKlasifikasiOptimistic,
+        confirmKlasifikasiUpdate,
+        rollbackKlasifikasiUpdate
+    } = useAppStore();
+    
     const [formData, setFormData] = useState({
         kode: '',
         deskripsi: '',
@@ -647,14 +739,31 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotificati
         };
         
         try {
+            let tempId;
+            const originalData = klasifikasiToEdit ? { ...klasifikasiToEdit } : null;
+            
             if (klasifikasiToEdit) {
-                const { error } = await supabase.from('klasifikasi').update(dataToSave).eq('id', klasifikasiToEdit.id);
-                if (error) throw error;
+                // Optimistic update for existing klasifikasi
+                updateKlasifikasiOptimistic(klasifikasiToEdit.id, dataToSave);
+                
+                const { data, error } = await supabase.from('klasifikasi').update(dataToSave).eq('id', klasifikasiToEdit.id).select().single();
+                if (error) {
+                    rollbackKlasifikasiUpdate(klasifikasiToEdit.id, originalData);
+                    throw error;
+                }
+                confirmKlasifikasiUpdate(klasifikasiToEdit.id, data);
                 showNotification('Kode klasifikasi berhasil diperbarui!', 'success');
                 onFinish();
             } else {
-                const { error } = await supabase.from('klasifikasi').insert([dataToSave]);
-                if (error) throw error;
+                // Optimistic insert for new klasifikasi
+                tempId = addKlasifikasiOptimistic(dataToSave);
+                
+                const { data, error } = await supabase.from('klasifikasi').insert([dataToSave]).select().single();
+                if (error) {
+                    rollbackKlasifikasiOptimistic(tempId);
+                    throw error;
+                }
+                confirmKlasifikasiOptimistic(tempId, data);
                 showNotification('Kode klasifikasi berhasil ditambahkan!', 'success');
                 // Reset form untuk input baru tanpa menutup form
                 setFormData({ kode: '', deskripsi: '', retensiAktif: '', retensiInaktif: '' });
@@ -686,15 +795,25 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotificati
 
 
 const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabase, listType }) => {
+    const { isItemLoading, deleteArsipOptimistic, confirmArsipDelete, rollbackArsipDelete } = useAppStore();
     
     const getKlasifikasiDesc = (kode) => {
         const found = klasifikasiList.find(k => k.kode === kode);
         return found ? found.deskripsi : 'Tidak Ditemukan';
     };
 
+    // Show skeleton if data is still loading
+    const isDataLoading = !arsipList || arsipList.length === 0;
+
     const handleDelete = async (id, filePath) => {
         if (window.confirm('Apakah Anda yakin ingin menghapus arsip ini secara permanen?')) {
+            // Find the original data for potential rollback
+            const originalData = arsipList.find(arsip => arsip.id === id);
+            
             try {
+                // Optimistic delete
+                deleteArsipOptimistic(id);
+                
                 // Hapus file dari storage jika ada
                 if (filePath) {
                     const { error: fileError } = await supabase.storage.from('arsip-files').remove([filePath]);
@@ -702,7 +821,12 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                 }
                 // Hapus record dari database
                 const { error: dbError } = await supabase.from('arsip').delete().eq('id', id);
-                if (dbError) throw dbError;
+                if (dbError) {
+                    rollbackArsipDelete(id, originalData);
+                    throw dbError;
+                }
+                
+                confirmArsipDelete(id);
 
             } catch (error) {
                 console.error("Error deleting document or file:", error);
@@ -777,6 +901,12 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                             )})}
                         </tbody>
                     </table>
+                ) : isDataLoading ? (
+                    <div className="space-y-4">
+                        <ArsipItemSkeleton />
+                        <ArsipItemSkeleton />
+                        <ArsipItemSkeleton />
+                    </div>
                 ) : (
                     <div className="text-center py-12 text-gray-500 dark:text-slate-400">
                         Tidak ada data arsip yang cocok dengan filter Anda.
@@ -935,14 +1065,28 @@ const StatCard = ({ icon, title, value, color }) => {
 const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ...props }) => {
     const [activeTab, setActiveTab] = useState('aktif');
     const { navigate, setEditingArsip } = props;
+    const { isItemLoading } = useAppStore();
+
+    // Show skeleton if data is still loading
+    const isDataLoading = !stats || stats.total === undefined;
 
     return (
         <div>
             <h2 className="text-3xl font-bold mb-6 dark:text-white">Dashboard</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <StatCard icon={<Archive size={28} />} title="Total Arsip" value={stats.total} color="blue" />
-                <StatCard icon={<Archive size={28} />} title="Arsip Aktif" value={stats.active} color="green" />
-                <StatCard icon={<Bell size={28} />} title="Arsip Inaktif" value={stats.inactive} color="red" />
+                {isDataLoading ? (
+                    <>
+                        <StatCardSkeleton />
+                        <StatCardSkeleton />
+                        <StatCardSkeleton />
+                    </>
+                ) : (
+                    <>
+                        <StatCard icon={<Archive size={28} />} title="Total Arsip" value={stats.total} color="blue" />
+                        <StatCard icon={<Archive size={28} />} title="Arsip Aktif" value={stats.active} color="green" />
+                        <StatCard icon={<Bell size={28} />} title="Arsip Inaktif" value={stats.inactive} color="red" />
+                    </>
+                )}
             </div>
             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md dark:border dark:border-slate-700 mb-8">
                 <h3 className="text-lg font-semibold mb-4 dark:text-white">Volume Arsip per Tahun</h3>
