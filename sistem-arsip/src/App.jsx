@@ -108,10 +108,7 @@ export default function App() {
     // Sidebar state
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-    // Cek konfigurasi environment variables
-    if (!isValidConfig) {
-        return <ConfigurationMessage />;
-    }
+    // Cek konfigurasi environment variables dipindahkan ke JSX agar urutan hooks tetap konsisten
 
     // --- Search Functionality ---
     const performSearch = async (query) => {
@@ -172,6 +169,7 @@ export default function App() {
 
     // --- Efek untuk Mengambil Data Awal & Berlangganan Perubahan ---
     useEffect(() => {
+        if (!supabase) return;
         // Fungsi untuk mengambil data awal
         const fetchData = async () => {
             setStoreLoading(true);
@@ -394,6 +392,9 @@ export default function App() {
 
     return (
         <>
+        {!isValidConfig ? (
+            <ConfigurationMessage />
+        ) : (
         <div className="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen font-sans text-gray-900">
             <div className="flex">
                 <Sidebar 
@@ -474,6 +475,7 @@ export default function App() {
                 }}
             />
         </div>
+        )}
         </>
     );
 }
@@ -595,7 +597,17 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
         }
 
         const selectedKlasifikasi = klasifikasiList.find(k => k.kode === formData.kodeKlasifikasi);
+        if (!selectedKlasifikasi) {
+            showNotification('Kode klasifikasi tidak valid.', 'error');
+            setIsLoading(false);
+            return;
+        }
         const tglSurat = new Date(formData.tanggalSurat);
+        if (isNaN(tglSurat)) {
+            showNotification('Tanggal surat tidak valid.', 'error');
+            setIsLoading(false);
+            return;
+        }
         const retensiDate = new Date(new Date(tglSurat).setFullYear(tglSurat.getFullYear() + Number(selectedKlasifikasi.retensiAktif)));
 
         const dataToSave = { 
@@ -942,7 +954,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                 // Hapus record dari database
                 const { error: dbError } = await supabase.from('arsip').delete().eq('id', id);
                 if (dbError) {
-                    rollbackArsipDelete(id, originalData);
+                    rollbackArsipDelete(originalData);
                     throw dbError;
                 }
                 

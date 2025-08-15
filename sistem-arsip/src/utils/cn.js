@@ -1,6 +1,7 @@
-import { clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
+// Lightweight classnames merge without external deps
 export function cn(...inputs) {
-  return twMerge(clsx(inputs));
+  return inputs
+    .flat(Infinity)
+    .filter(Boolean)
+    .join(' ');
 }
