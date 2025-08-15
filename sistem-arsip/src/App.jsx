@@ -37,6 +37,7 @@ import {
 
 import DevIndicator from './components/DevIndicator.jsx'
 import './animations.css'
+import InputField from './InputField.jsx'
 
 // --- Konfigurasi Supabase ---
 // Pastikan Anda membuat file .env dan mengisinya
@@ -396,7 +397,7 @@ export default function App() {
             <ConfigurationMessage />
         ) : (
         <div className="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen font-sans text-gray-900">
-            <div className="flex">
+            <div className="flex min-h-screen">
                 <Sidebar 
                     collapsed={sidebarCollapsed}
                     onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -667,8 +668,8 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
     }, [klasifikasiList]);
 
     return (
-        <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-md dark:border dark:border-slate-700 max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6 dark:text-white">{arsipToEdit ? 'Edit Arsip' : 'Tambah Arsip Baru'}</h2>
+        <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 max-w-2xl mx-auto">
+            <h2 className="text-2xl font-bold mb-6 text-gray-900">{arsipToEdit ? 'Edit Arsip' : 'Tambah Arsip Baru'}</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
                 <InputField name="nomorSurat" label="Nomor Surat" value={formData.nomorSurat} onChange={handleChange} required />
                 <InputField name="tanggalSurat" label="Tanggal Surat" type="date" value={formData.tanggalSurat} onChange={handleChange} required />
@@ -676,7 +677,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 <InputField name="tujuanSurat" label="Tujuan Surat" value={formData.tujuanSurat} onChange={handleChange} required />
                 <InputField name="perihal" label="Perihal / Isi Ringkas" value={formData.perihal} onChange={handleChange} required />
                 <div>
-                    <label htmlFor="kodeKlasifikasi" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Kode Klasifikasi</label>
+                    <label htmlFor="kodeKlasifikasi" className="block text-sm font-medium text-gray-700 mb-1">Kode Klasifikasi</label>
                     <select id="kodeKlasifikasi" name="kodeKlasifikasi" value={formData.kodeKlasifikasi} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                         <option value="">Pilih Kode Klasifikasi</option>
                         {groupedKlasifikasi.map(group => {
@@ -708,22 +709,22 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Lampiran Berkas</label>
-                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-slate-600 border-dashed rounded-md">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Lampiran Berkas</label>
+                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
                         <div className="space-y-1 text-center">
                             <FilePlus className="mx-auto h-12 w-12 text-gray-400" />
-                            <div className="flex text-sm text-gray-600 dark:text-slate-400">
+                            <div className="flex text-sm text-gray-600">
                                 <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500">
                                     <span>Pilih berkas untuk diunggah</span>
                                     <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} />
                                 </label>
                             </div>
-                            <p className="text-xs text-gray-500 dark:text-slate-500">PDF, DOCX, PNG, JPG, dll.</p>
+                            <p className="text-xs text-gray-500">PDF, DOCX, PNG, JPG, dll.</p>
                         </div>
                     </div>
-                    {file && <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">Berkas dipilih: {file.name}</p>}
+                    {file && <p className="mt-2 text-sm text-gray-500">Berkas dipilih: {file.name}</p>}
                     {!file && existingFile.fileName && (
-                         <div className="mt-2 text-sm text-gray-500 dark:text-slate-400">
+                         <div className="mt-2 text-sm text-gray-500">
                             <span>Lampiran saat ini: </span>
                             <a href={`${supabaseUrl}/storage/v1/object/public/arsip-files/${existingFile.filePath}`} target="_blank" rel="noopener noreferrer" className="font-medium text-primary-600 hover:underline">{existingFile.fileName}</a>
                         </div>
@@ -731,7 +732,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 </div>
 
                 <div className="flex justify-end gap-4 pt-4">
-                    <button type="button" onClick={onFinish} className="px-6 py-2 rounded-lg bg-gray-100 dark:bg-slate-600 hover:bg-gray-200 dark:hover:bg-slate-500 text-gray-700 dark:text-slate-200">Batal</button>
+                    <button type="button" onClick={onFinish} className="px-6 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700">Batal</button>
                     <button type="submit" disabled={isLoading} className="px-6 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50 flex items-center gap-2">
                         {isLoading ? `Menyimpan...` : (arsipToEdit ? 'Simpan Perubahan' : 'Simpan Arsip')}
                     </button>
