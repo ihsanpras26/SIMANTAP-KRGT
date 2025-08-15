@@ -95,6 +95,7 @@ export default function App() {
     } = useAppStore();
     const [editingArsip, setEditingArsip] = useState(null);
     const [editingKlasifikasi, setEditingKlasifikasi] = useState(null);
+    const [showKlasifikasiModal, setShowKlasifikasiModal] = useState(false);
     const [showInfoModal, setShowInfoModal] = useState(false);
     // Removed dark mode state - using light mode only
     // Notification state removed - using react-hot-toast instead
@@ -108,6 +109,11 @@ export default function App() {
     
     // Sidebar state
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+    // Auth admin-only
+    const [session, setSession] = useState(null);
+    const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
+    const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || '';
 
     // Cek konfigurasi environment variables dipindahkan ke JSX agar urutan hooks tetap konsisten
 
@@ -129,9 +135,9 @@ export default function App() {
                 return searchTerms.some(term => searchableText.includes(term));
             }).map(arsip => ({ ...arsip, type: 'arsip' }));
 
-            // Search in klasifikasi
+            // Search in klasifikasi (use deskripsi field)
             const klasifikasiResults = klasifikasiList.filter(klasifikasi => {
-                const searchableText = `${klasifikasi.kode} ${klasifikasi.nama}`.toLowerCase();
+                const searchableText = `${klasifikasi.kode} ${klasifikasi.deskripsi}`.toLowerCase();
                 return searchTerms.some(term => searchableText.includes(term));
             }).map(klasifikasi => ({ ...klasifikasi, type: 'klasifikasi' }));
 
@@ -171,6 +177,9 @@ export default function App() {
     // --- Efek untuk Mengambil Data Awal & Berlangganan Perubahan ---
     useEffect(() => {
         if (!supabase) return;
+        // Sinkronisasi session
+        supabase.auth.getSession().then(({ data }) => setSession(data.session));
+        const { data: authListener } = supabase.auth.onAuthStateChange((_event, currentSession) => setSession(currentSession));
         // Fungsi untuk mengambil data awal
         const fetchData = async () => {
             setStoreLoading(true);
@@ -235,6 +244,7 @@ export default function App() {
 
         // Membersihkan subscription saat komponen di-unmount
         return () => {
+            authListener?.subscription?.unsubscribe?.();
             supabase.removeChannel(arsipChannel);
             supabase.removeChannel(klasifikasiChannel);
         };
@@ -319,6 +329,11 @@ export default function App() {
         if (view !== 'klasifikasi') setEditingKlasifikasi(null);
     };
 
+    const handleSearchSubmit = (value) => {
+        setSearchQuery(value ?? '');
+        setCurrentView('cari');
+    };
+
     // Move useMemo outside of any conditional logic
     const { activeArchives, inactiveArchives, archivesByYear } = useMemo(() => {
         const today = new Date();
@@ -370,7 +385,7 @@ export default function App() {
             case 'tambah':
                 return <ArsipForm {...props} arsipToEdit={editingArsip} onFinish={() => navigate('dashboard')} />;
             case 'klasifikasi':
-                return <KlasifikasiManager {...props} />;
+                return <KlasifikasiManager {...props} openModal={() => setShowKlasifikasiModal(true)} />;
             case 'cari':
                  return <AdvancedSearchView {...props} />;
             case 'semua':
@@ -390,6 +405,48 @@ export default function App() {
         { id: 'cari', label: 'Pencarian Lanjutan', icon: Search, view: 'cari' },
         { id: 'laporan', label: 'Laporan', icon: FileText, view: 'laporan' },
     ];
+
+    const handleLogout = async () => {
+        try {
+            await supabase?.auth?.signOut();
+            setSession(null);
+            showNotification('Berhasil logout', 'success');
+        } catch (e) {}
+    };
+
+    const handleAdminLogin = async (email, password) => {
+        if (!supabase) return;
+        try {
+            if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+                showNotification('ENV admin belum diset', 'error');
+                return;
+            }
+            if (email !== ADMIN_EMAIL || password !== ADMIN_PASSWORD) {
+                showNotification('Kredensial tidak valid', 'error');
+                return;
+            }
+            const { error } = await supabase.auth.signInWithPassword({ email, password });
+            if (error) {
+                showNotification(error.message, 'error');
+                return;
+            }
+            showNotification('Login berhasil', 'success');
+        } catch (e) {
+            showNotification('Login gagal', 'error');
+        }
+    };
+
+    if (isValidConfig && !session) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-100 w-full max-w-md">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">Login Admin</h2>
+                    <AdminLoginForm onSubmit={handleAdminLogin} />
+                </div>
+                <Toaster position="top-right" />
+            </div>
+        );
+    }
 
     return (
         <>
@@ -419,6 +476,8 @@ export default function App() {
                         }
                         searchValue={searchQuery}
                         onSearchChange={setSearchQuery}
+                        onSearchSubmit={handleSearchSubmit}
+                        onLogout={handleLogout}
                     />
 
                     <main className="flex-1 p-6 overflow-auto">
@@ -465,6 +524,21 @@ export default function App() {
                     },
                 }}
             />
+
+            {/* Modal Tambah/Edit Klasifikasi */}
+            <Modal isOpen={showKlasifikasiModal} onClose={() => { setShowKlasifikasiModal(false); setEditingKlasifikasi(null); }} size="lg">
+                <ModalHeader onClose={() => { setShowKlasifikasiModal(false); setEditingKlasifikasi(null); }}>
+                    <ModalTitle>{editingKlasifikasi ? 'Edit Kode Klasifikasi' : 'Tambah Kode Klasifikasi'}</ModalTitle>
+                </ModalHeader>
+                <ModalContent>
+                    <KlasifikasiForm 
+                        supabase={supabase}
+                        klasifikasiToEdit={editingKlasifikasi}
+                        onFinish={() => { setEditingKlasifikasi(null); setShowKlasifikasiModal(false); }}
+                        showNotification={showNotification}
+                    />
+                </ModalContent>
+            </Modal>
         </div>
         )}
         </>
@@ -745,7 +819,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
 // Sisa komponen (NavItem, StatCard, Dashboard, dll.) tetap sama, hanya perlu passing props 'supabase'
 // ... (Saya akan menyalin komponen lainnya dengan modifikasi yang diperlukan)
 
-const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, setEditingKlasifikasi, showNotification, setDeleteConfirmModal }) => {
+const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, setEditingKlasifikasi, showNotification, setDeleteConfirmModal, openModal }) => {
     // ... (JSX sama, hanya logic handler yang berubah)
     const handleEdit = (klasifikasi) => {
         setEditingKlasifikasi(klasifikasi);
@@ -760,9 +834,12 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
         });
     };
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                <h2 className="text-2xl font-bold mb-4 text-gray-900">Daftar Kode Klasifikasi</h2>
+        <div className="grid grid-cols-1 gap-8">
+            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                <div className="flex items-center justify-between mb-4 gap-4">
+                    <h2 className="text-2xl font-bold text-gray-900">Daftar Kode Klasifikasi</h2>
+                    <button onClick={() => { setEditingKlasifikasi(null); openModal && openModal(); }} className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700">Tambah Kode</button>
+                </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-gray-50 text-gray-600 uppercase">
@@ -786,7 +863,7 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                         <td className="p-3 text-center">{k.retensiInaktif} thn</td>
                                         <td className="p-3 text-center">
                                             <div className="flex justify-center gap-3">
-                                                <button onClick={() => handleEdit(k)} className="text-primary-500 hover:text-primary-700" title="Edit">
+                                                <button onClick={() => { handleEdit(k); openModal && openModal(); }} className="text-primary-500 hover:text-primary-700" title="Edit">
                                                     <Edit size={16} />
                                                 </button>
                                                 <button onClick={() => handleDelete(k.id, k.kode)} className="text-red-500 hover:text-red-700" title="Hapus">
@@ -800,14 +877,6 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                         </tbody>
                     </table>
                 </div>
-            </div>
-            <div className="lg:col-span-1">
-                <KlasifikasiForm 
-                    supabase={supabase}
-                    klasifikasiToEdit={editingKlasifikasi} 
-                    onFinish={() => setEditingKlasifikasi(null)}
-                    showNotification={showNotification}
-                />
             </div>
         </div>
     );
@@ -1388,4 +1457,37 @@ const ExportExcelButton = ({ data, filename, klasifikasiList }) => {
             Ekspor Excel
         </button>
     );
+};
+
+const AdminLoginForm = ({ onSubmit }) => {
+	const [email, setEmail] = useState('');
+	const [password, setPassword] = useState('');
+	const [loading, setLoading] = useState(false);
+
+	const handleSubmit = async (e) => {
+		e.preventDefault();
+		setLoading(true);
+		try {
+			await onSubmit?.(email, password);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	return (
+		<form onSubmit={handleSubmit} className="space-y-4">
+			<div>
+				<label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+				<Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="admin@simantep.local" required />
+			</div>
+			<div>
+				<label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+				<Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Kata sandi" required />
+			</div>
+			<button type="submit" disabled={loading} className="w-full py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-60">
+				{loading ? 'Masuk...' : 'Masuk'}
+			</button>
+			<p className="text-xs text-gray-500 text-center">Hanya akun admin yang diizinkan</p>
+		</form>
+	);
 };

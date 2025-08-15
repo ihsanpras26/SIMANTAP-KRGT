@@ -1,15 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Search, Bell, User, Settings, LogOut, Sun, Moon } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Search, Bell, User, LogOut } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Badge } from './Badge';
 
-const Header = ({ title, subtitle, searchValue, onSearchChange, className }) => {
-  const [isDarkMode, setIsDarkMode] = React.useState(false);
+const Header = ({ title, subtitle, searchValue, onSearchChange, onSearchSubmit, onLogout, className }) => {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
-  const [notifications] = React.useState(3); // Mock notifications
+  const [notifications] = React.useState(0);
 
   return (
     <motion.header
@@ -35,33 +35,26 @@ const Header = ({ title, subtitle, searchValue, onSearchChange, className }) => 
         <div className="flex-1 max-w-md mx-8">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <Input
-              type="text"
-              placeholder="Cari arsip, klasifikasi, atau dokumen..."
-              value={searchValue}
-              onChange={(e) => onSearchChange?.(e.target.value)}
-              className="pl-10 bg-gray-50 border-gray-200 focus:bg-white h-11"
-            />
+            <form onSubmit={(e) => { e.preventDefault(); onSearchSubmit?.(searchValue); }}>
+              <Input
+                type="text"
+                placeholder="Cari arsip, klasifikasi, atau dokumen..."
+                value={searchValue}
+                onChange={(e) => onSearchChange?.(e.target.value)}
+                className="pl-10 bg-gray-50 border-gray-200 focus:bg-white h-11 w-full"
+              />
+            </form>
           </div>
         </div>
 
         {/* Right Section - Actions */}
         <div className="flex items-center gap-3">
-          {/* Theme Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="h-10 w-10 rounded-full hover:bg-gray-100"
-          >
-            {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-          </Button>
-
           {/* Notifications */}
           <div className="relative">
             <Button
               variant="ghost"
               size="icon"
+              onClick={() => toast('Belum ada notifikasi baru', { position: 'top-right' })}
               className="h-10 w-10 rounded-full hover:bg-gray-100"
             >
               <Bell size={18} />
@@ -75,15 +68,6 @@ const Header = ({ title, subtitle, searchValue, onSearchChange, className }) => 
               </Badge>
             )}
           </div>
-
-          {/* Settings */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 rounded-full hover:bg-gray-100"
-          >
-            <Settings size={18} />
-          </Button>
 
           {/* User Menu */}
           <div className="relative">
@@ -118,17 +102,10 @@ const Header = ({ title, subtitle, searchValue, onSearchChange, className }) => 
                   Profil
                 </Button>
                 
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start px-4 py-2 h-auto text-sm hover:bg-gray-50"
-                >
-                  <Settings size={16} className="mr-3" />
-                  Pengaturan
-                </Button>
-                
                 <div className="border-t border-gray-100 mt-2 pt-2">
                   <Button
                     variant="ghost"
+                    onClick={() => onLogout?.()}
                     className="w-full justify-start px-4 py-2 h-auto text-sm text-red-600 hover:bg-red-50"
                   >
                     <LogOut size={16} className="mr-3" />

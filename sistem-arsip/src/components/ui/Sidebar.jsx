@@ -155,7 +155,7 @@ const Sidebar = ({
               exit={{ opacity: 0, y: 10 }}
               className="text-center text-gray-500 text-xs"
             >
-              <p>© 2024 SIMANTEP</p>
+              <p>© {new Date().getFullYear()} SIMANTEP</p>
               <p>Versi 1.0.0</p>
             </motion.div>
           )}
