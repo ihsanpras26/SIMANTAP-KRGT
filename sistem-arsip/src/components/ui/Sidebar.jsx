@@ -1,11 +1,11 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  Archive, 
-  FilePlus, 
-  FolderKanban, 
-  Search, 
+import {
+  LayoutDashboard,
+  Archive,
+  FilePlus,
+  FolderKanban,
+  Search,
   FileDown,
   ChevronLeft,
   ChevronRight
@@ -22,22 +22,40 @@ const sidebarItems = [
   { id: 'laporan', label: 'Laporan', icon: FileDown },
 ];
 
-const Sidebar = ({ currentView, setCurrentView, isCollapsed, setIsCollapsed }) => {
+const Sidebar = ({
+  currentView,
+  setCurrentView,
+  isCollapsed,
+  setIsCollapsed,
+  collapsed,
+  onToggle,
+  navigationItems,
+  onNavigate,
+  onShowInfo,
+}) => {
+  const collapsedState = typeof isCollapsed === 'boolean' ? isCollapsed : !!collapsed;
+  const toggleCollapse = () => {
+    if (typeof setIsCollapsed === 'function') {
+      setIsCollapsed(!collapsedState);
+    } else if (typeof onToggle === 'function') {
+      onToggle();
+    }
+  };
+
+  const items = Array.isArray(navigationItems) && navigationItems.length > 0 ? navigationItems : sidebarItems;
+
   return (
     <motion.div
       initial={false}
-      animate={{ width: isCollapsed ? 80 : 280 }}
+      animate={{ width: collapsedState ? 80 : 280 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="relative h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 border-r border-slate-700/50 shadow-2xl"
+      className="relative h-screen overflow-y-auto bg-white border-r border-gray-200/60 shadow-lg"
     >
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_1px_1px,rgba(255,255,255,0.05)_1px,transparent_0)] [background-size:20px_20px]" />
-      
       {/* Header */}
-      <div className="relative p-6 border-b border-slate-700/50">
+      <div className="relative p-6 border-b border-gray-200/60">
         <div className="flex items-center justify-between">
           <AnimatePresence>
-            {!isCollapsed && (
+            {!collapsedState && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -49,49 +67,59 @@ const Sidebar = ({ currentView, setCurrentView, isCollapsed, setIsCollapsed }) =
                   <Archive className="text-white" size={18} />
                 </div>
                 <div>
-                  <h1 className="text-white font-bold text-lg">SIMANTEP</h1>
-                  <p className="text-slate-400 text-xs">Sistem Arsip Digital</p>
+                  <h1 className="text-gray-900 font-bold text-lg">SIMANTEP</h1>
+                  <p className="text-gray-500 text-xs">Sistem Arsip Digital</p>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-          
+
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-slate-400 hover:text-white hover:bg-slate-700/50 h-8 w-8"
+            onClick={toggleCollapse}
+            className="text-gray-500 hover:text-gray-900 hover:bg-gray-100 h-8 w-8"
+            aria-label={collapsedState ? 'Buka Sidebar' : 'Tutup Sidebar'}
           >
-            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            {collapsedState ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </Button>
         </div>
       </div>
 
       {/* Navigation */}
       <nav className="relative p-4 space-y-2">
-        {sidebarItems.map((item, index) => {
+        {items.map((item, index) => {
           const Icon = item.icon;
-          const isActive = currentView === item.id;
-          
+          const viewId = item.view ?? item.id;
+          const isActive = currentView === viewId || currentView === item.id;
+
+          const handleClick = () => {
+            if (typeof onNavigate === 'function') {
+              onNavigate(viewId);
+            } else if (typeof setCurrentView === 'function') {
+              setCurrentView(viewId);
+            }
+          };
+
           return (
             <motion.div
               key={item.id}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
             >
               <Button
                 variant="ghost"
-                onClick={() => setCurrentView(item.id)}
+                onClick={handleClick}
                 className={cn(
-                  'w-full justify-start gap-3 h-12 text-slate-300 hover:text-white hover:bg-slate-700/50 transition-all duration-200',
-                  isActive && 'bg-primary-600/20 text-primary-400 border border-primary-500/30 shadow-lg shadow-primary-500/10',
-                  isCollapsed && 'justify-center px-0'
+                  'relative w-full justify-start gap-3 h-12 text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-all duration-200',
+                  isActive && 'bg-primary-50 text-primary-700 border border-primary-200 shadow-soft',
+                  collapsedState && 'justify-center px-0'
                 )}
               >
-                <Icon size={20} className={cn(isActive && 'text-primary-400')} />
+                {Icon && <Icon size={20} className={cn(isActive ? 'text-primary-600' : 'text-gray-500')} />}
                 <AnimatePresence>
-                  {!isCollapsed && (
+                  {!collapsedState && (
                     <motion.span
                       initial={{ opacity: 0, width: 0 }}
                       animate={{ opacity: 1, width: 'auto' }}
@@ -103,7 +131,7 @@ const Sidebar = ({ currentView, setCurrentView, isCollapsed, setIsCollapsed }) =
                     </motion.span>
                   )}
                 </AnimatePresence>
-                
+
                 {isActive && (
                   <motion.div
                     layoutId="activeIndicator"
@@ -118,14 +146,14 @@ const Sidebar = ({ currentView, setCurrentView, isCollapsed, setIsCollapsed }) =
       </nav>
 
       {/* Footer */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-700/50">
+      <div className="sticky bottom-0 left-0 right-0 p-4 border-t border-gray-200/60 bg-white">
         <AnimatePresence>
-          {!isCollapsed && (
+          {!collapsedState && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              className="text-center text-slate-500 text-xs"
+              exit={{ opacity: 0, y: 10 }}
+              className="text-center text-gray-500 text-xs"
             >
               <p>© 2024 SIMANTEP</p>
               <p>Versi 1.0.0</p>

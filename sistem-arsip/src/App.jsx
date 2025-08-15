@@ -408,26 +408,16 @@ export default function App() {
                 
                 <div className="flex-1 flex flex-col min-h-screen">
                     <Header 
-                        searchQuery={searchQuery}
+                        title={
+                            currentView === 'dashboard' ? 'Dashboard' :
+                            currentView === 'tambah' ? 'Tambah Arsip' :
+                            currentView === 'semua' ? 'Semua Arsip' :
+                            currentView === 'klasifikasi' ? 'Kode Klasifikasi' :
+                            currentView === 'cari' ? 'Pencarian Lanjutan' :
+                            currentView === 'laporan' ? 'Laporan' : 'SIMANTEP'
+                        }
+                        searchValue={searchQuery}
                         onSearchChange={setSearchQuery}
-                        searchResults={searchResults}
-                        showSearchResults={showSearchResults}
-                        isSearching={isSearching}
-                        onSearchResultClick={(result) => {
-                            if (result.type === 'arsip') {
-                                navigate('semua');
-                            } else {
-                                navigate('klasifikasi');
-                            }
-                            setShowSearchResults(false);
-                            setSearchQuery('');
-                        }}
-                        onCloseSearch={() => {
-                            setShowSearchResults(false);
-                            setSearchQuery('');
-                        }}
-                        currentView={currentView}
-                        sidebarCollapsed={sidebarCollapsed}
                     />
 
                     <main className="flex-1 p-6 overflow-auto">

@@ -16,11 +16,11 @@ const Header = ({ title, subtitle, searchValue, onSearchChange, className }) => 
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
-        'sticky top-0 z-40 w-full border-b border-gray-200/50 bg-white/80 backdrop-blur-xl shadow-sm',
+        'sticky top-0 z-40 w-full border-b border-gray-200/60 bg-white backdrop-blur supports-[backdrop-filter]:bg-white/90 shadow-sm',
         className
       )}
     >
-      <div className="flex h-16 items-center justify-between px-6">
+      <div className="flex h-16 md:h-20 items-center justify-between px-4 md:px-6">
         {/* Left Section - Title */}
         <div className="flex items-center gap-4">
           <div>
@@ -40,7 +40,7 @@ const Header = ({ title, subtitle, searchValue, onSearchChange, className }) => 
               placeholder="Cari arsip, klasifikasi, atau dokumen..."
               value={searchValue}
               onChange={(e) => onSearchChange?.(e.target.value)}
-              className="pl-10 bg-gray-50/50 border-gray-200/50 focus:bg-white"
+              className="pl-10 bg-gray-50 border-gray-200 focus:bg-white h-11"
             />
           </div>
         </div>
@@ -52,7 +52,7 @@ const Header = ({ title, subtitle, searchValue, onSearchChange, className }) => 
             variant="ghost"
             size="icon"
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className="h-9 w-9 rounded-full hover:bg-gray-100"
+            className="h-10 w-10 rounded-full hover:bg-gray-100"
           >
             {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
           </Button>
@@ -62,7 +62,7 @@ const Header = ({ title, subtitle, searchValue, onSearchChange, className }) => 
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 rounded-full hover:bg-gray-100"
+              className="h-10 w-10 rounded-full hover:bg-gray-100"
             >
               <Bell size={18} />
             </Button>
@@ -80,7 +80,7 @@ const Header = ({ title, subtitle, searchValue, onSearchChange, className }) => 
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 rounded-full hover:bg-gray-100"
+            className="h-10 w-10 rounded-full hover:bg-gray-100"
           >
             <Settings size={18} />
           </Button>
@@ -90,7 +90,7 @@ const Header = ({ title, subtitle, searchValue, onSearchChange, className }) => 
             <Button
               variant="ghost"
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="h-9 px-3 rounded-full hover:bg-gray-100 flex items-center gap-2"
+              className="h-10 px-3 rounded-full hover:bg-gray-100 flex items-center gap-2"
             >
               <div className="w-6 h-6 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center">
                 <User size={14} className="text-white" />
