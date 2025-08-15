@@ -761,11 +761,11 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
     };
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md dark:border dark:border-slate-700">
-                <h2 className="text-2xl font-bold mb-4 dark:text-white">Daftar Kode Klasifikasi</h2>
+            <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-md border border-gray-200">
+                <h2 className="text-2xl font-bold mb-4 text-gray-900">Daftar Kode Klasifikasi</h2>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300 uppercase">
+                        <thead className="bg-gray-50 text-gray-600 uppercase">
                             <tr>
                                 <th className="p-3">Kode</th>
                                 <th className="p-3">Deskripsi</th>
@@ -779,7 +779,7 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                 const isMainCategory = k.kode.length === 3;
                                 const indentationLevel = k.kode.split('.').length - 1;
                                 return (
-                                    <tr key={k.id} className={`border-b border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50 ${isMainCategory ? 'bg-gray-100 dark:bg-slate-700' : ''}`}>
+                                    <tr key={k.id} className={`border-b border-gray-200 hover:bg-gray-50 ${isMainCategory ? 'bg-gray-100' : ''}`}>
                                         <td className={`p-3 font-medium ${isMainCategory ? 'font-bold' : ''}`} style={{ paddingLeft: `${0.75 + indentationLevel * 1.5}rem` }}>{k.kode}</td>
                                         <td className={`p-3 ${isMainCategory ? 'font-bold' : ''}`}>{k.deskripsi}</td>
                                         <td className="p-3 text-center">{k.retensiAktif} thn</td>
@@ -789,7 +789,7 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                                 <button onClick={() => handleEdit(k)} className="text-primary-500 hover:text-primary-700" title="Edit">
                                                     <Edit size={16} />
                                                 </button>
-                                                <button onClick={() => handleDelete(k.id, k.kode)} className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Hapus">
+                                                <button onClick={() => handleDelete(k.id, k.kode)} className="text-red-500 hover:text-red-700" title="Hapus">
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
@@ -900,15 +900,15 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotificati
     };
 
     return (
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md dark:border dark:border-slate-700 sticky top-8">
-            <h3 className="text-xl font-bold mb-4 dark:text-white">{klasifikasiToEdit ? 'Edit Kode Klasifikasi' : 'Tambah Kode Baru'}</h3>
+        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 sticky top-8">
+            <h3 className="text-xl font-bold mb-4 text-gray-900">{klasifikasiToEdit ? 'Edit Kode Klasifikasi' : 'Tambah Kode Baru'}</h3>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <InputField name="kode" label="Kode Klasifikasi" value={formData.kode} onChange={handleChange} required disabled={!!klasifikasiToEdit} />
                 <InputField name="deskripsi" label="Deskripsi" value={formData.deskripsi} onChange={handleChange} required />
                 <InputField name="retensiAktif" label="Retensi Aktif (Tahun)" type="number" value={formData.retensiAktif} onChange={handleChange} required />
                 <InputField name="retensiInaktif" label="Retensi Inaktif (Tahun)" type="number" value={formData.retensiInaktif} onChange={handleChange} required />
                 <div className="flex justify-end gap-4 pt-2">
-                    {klasifikasiToEdit && <button type="button" onClick={onFinish} className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-500">Batal</button>}
+                    {klasifikasiToEdit && <button type="button" onClick={onFinish} className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300">Batal</button>}
                     <button type="submit" disabled={isLoading} className="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50 flex items-center justify-center">{isLoading ? 'Menyimpan...' : 'Simpan'}</button>
                 </div>
             </form>
@@ -959,15 +959,15 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
     };
     
     return (
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md dark:border dark:border-slate-700">
+        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
             <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <h3 className="text-xl font-bold dark:text-white">{title}</h3>
+                <h3 className="text-xl font-bold text-gray-900">{title}</h3>
                 <ExportExcelButton data={arsipList} filename={`Daftar_Arsip_${listType}`} klasifikasiList={klasifikasiList} />
             </div>
             <div className="overflow-x-auto">
                 {arsipList.length > 0 ? (
                     <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300">
+                        <thead className="bg-gray-50 text-gray-600">
                             <tr>
                                 <th className="p-3">Lampiran</th>
                                 <th className="p-3">Perihal</th>
@@ -985,15 +985,15 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                 const today = new Date();
                                 const retensiDate = new Date(arsip.tanggalRetensi);
                                 let status = 'Aktif';
-                                let statusColor = 'text-green-600 dark:text-green-400';
+                                let statusColor = 'text-green-600';
                                 if (retensiDate && today > retensiDate) {
                                     status = 'Inaktif';
-                                    statusColor = 'text-red-600 dark:text-red-400';
+                                    statusColor = 'text-red-600';
                                 }
                                 const fileUrl = arsip.filePath ? `${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}` : null;
 
                                 return (
-                                <tr key={arsip.id} className="border-b border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700/50">
+                                <tr key={arsip.id} className="border-b border-gray-200 hover:bg-gray-50">
                                     <td className="p-3 text-center">
                                         {fileUrl ? (
                                             <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:text-primary-700" title={arsip.fileName}>
@@ -1003,19 +1003,19 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                             <span className="text-gray-400">-</span>
                                         )}
                                     </td>
-                                    <td className="p-3 font-medium dark:text-white">{arsip.perihal}</td>
-                                    <td className="p-3 text-gray-500 dark:text-slate-400">{arsip.nomorSurat}</td>
-                                    <td className="p-3 text-gray-500 dark:text-slate-400">{arsip.tujuanSurat}</td>
-                                    <td className="p-3 text-gray-500 dark:text-slate-400">{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</td>
-                                    <td className="p-3 text-gray-500 dark:text-slate-400">{retensiDate ? retensiDate.toLocaleDateString('id-ID') : 'N/A'}</td>
+                                    <td className="p-3 font-medium text-gray-900">{arsip.perihal}</td>
+                                    <td className="p-3 text-gray-600">{arsip.nomorSurat}</td>
+                                    <td className="p-3 text-gray-600">{arsip.tujuanSurat}</td>
+                                    <td className="p-3 text-gray-600">{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</td>
+                                    <td className="p-3 text-gray-600">{retensiDate ? retensiDate.toLocaleDateString('id-ID') : 'N/A'}</td>
                                     <td className={`p-3 font-medium ${statusColor}`}>{status}</td>
-                                    <td className="p-3 text-gray-500 dark:text-slate-400" title={getKlasifikasiDesc(arsip.kodeKlasifikasi)}>{arsip.kodeKlasifikasi}</td>
+                                    <td className="p-3 text-gray-600" title={getKlasifikasiDesc(arsip.kodeKlasifikasi)}>{arsip.kodeKlasifikasi}</td>
                                     <td className="p-3 text-center">
                                         <div className="flex justify-center gap-3">
                                             <button onClick={() => setEditingArsip(arsip)} className="text-primary-500 hover:text-primary-700" title="Edit">
                                                 <Edit size={16} />
                                             </button>
-                                            <button onClick={() => handleDelete(arsip.id, arsip.filePath)} className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300" title="Hapus">
+                                            <button onClick={() => handleDelete(arsip.id, arsip.filePath)} className="text-red-500 hover:text-red-700" title="Hapus">
                                                 <Trash2 size={16} />
                                             </button>
                                         </div>
@@ -1031,7 +1031,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                 <ArsipSkeleton />
                     </div>
                 ) : (
-                    <div className="text-center py-12 text-gray-500 dark:text-slate-400">
+                    <div className="text-center py-12 text-gray-500">
                         Tidak ada data arsip yang cocok dengan filter Anda.
                     </div>
                 )}
@@ -1099,8 +1099,8 @@ const AdvancedSearchView = ({ arsipList, ...props }) => {
 
     return (
         <div>
-             <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md dark:border dark:border-slate-700 mb-8">
-                <h2 className="text-2xl font-bold mb-4 dark:text-white flex items-center gap-3"><Filter size={24} /> Pencarian Lanjutan</h2>
+             <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200 mb-8">
+                <h2 className="text-2xl font-bold mb-4 text-gray-900 flex items-center gap-3"><Filter size={24} /> Pencarian Lanjutan</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <InputField name="keyword" label="Kata Kunci" value={filters.keyword} onChange={handleFilterChange} placeholder="Perihal, nomor surat..." />
                     <div className="grid grid-cols-2 gap-2">
@@ -1108,7 +1108,7 @@ const AdvancedSearchView = ({ arsipList, ...props }) => {
                         <InputField name="endDate" label="Sampai Tanggal" type="date" value={filters.endDate} onChange={handleFilterChange} />
                     </div>
                     <div>
-                        <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Status Arsip</label>
+                        <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">Status Arsip</label>
                         <select name="status" id="status" value={filters.status} onChange={handleFilterChange} className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                             <option value="semua">Semua Status</option>
                             <option value="aktif">Aktif</option>
@@ -1116,7 +1116,7 @@ const AdvancedSearchView = ({ arsipList, ...props }) => {
                         </select>
                     </div>
                      <div>
-                        <label htmlFor="klasifikasi" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Kode Klasifikasi</label>
+                        <label htmlFor="klasifikasi" className="block text-sm font-medium text-gray-700 mb-1">Kode Klasifikasi</label>
                         <select name="klasifikasi" id="klasifikasi" value={filters.klasifikasi} onChange={handleFilterChange} className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
                            <option value="semua">Semua Klasifikasi</option>
                            {props.klasifikasiList.sort((a,b) => a.kode.localeCompare(b.kode, undefined, {numeric: true})).map(k => <option key={k.id} value={k.kode}>{k.kode} - {k.deskripsi}</option>)}
@@ -1124,7 +1124,7 @@ const AdvancedSearchView = ({ arsipList, ...props }) => {
                     </div>
                 </div>
                  <div className="mt-4 flex justify-end">
-                    <button onClick={resetFilters} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 dark:bg-slate-600 dark:text-slate-200 rounded-lg hover:bg-gray-300 dark:hover:bg-slate-500">
+                    <button onClick={resetFilters} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">
                         <X size={16} /> Reset Filter
                     </button>
                 </div>
@@ -1136,7 +1136,7 @@ const AdvancedSearchView = ({ arsipList, ...props }) => {
 
 const ReportingView = ({ arsipList, klasifikasiList }) => {
     // Logika komponen ini tidak perlu diubah karena hanya memproses data yang sudah ada di client
-    return <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-xl shadow-md">Fitur Laporan dalam pengembangan untuk versi Supabase.</div>;
+    return <div className="text-center p-8 bg-white rounded-xl shadow-md border border-gray-200">Fitur Laporan dalam pengembangan untuk versi Supabase.</div>;
 };
 
 const InfoModal = ({ onClose }) => {
@@ -1186,8 +1186,8 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-                    <p className="text-gray-600 dark:text-gray-400 mt-1">Selamat datang di Sistem Arsip Digital</p>
+                    <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+                    <p className="text-gray-600 mt-1">Selamat datang di Sistem Arsip Digital</p>
                 </div>
                 <div className="flex items-center space-x-3">
                     <Badge variant="success" className="px-3 py-1">
@@ -1216,7 +1216,7 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
 
             {/* Chart Card */}
             <Card className="overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20">
+                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="flex items-center gap-2">
@@ -1287,7 +1287,7 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
                             </ResponsiveContainer>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-16 text-gray-500 dark:text-gray-400">
+                        <div className="flex flex-col items-center justify-center py-16 text-gray-500">
                             <Archive size={48} className="mb-4 opacity-50" />
                             <p className="text-lg font-medium mb-2">Belum ada data arsip</p>
                             <p className="text-sm">Data akan muncul setelah Anda menambahkan arsip pertama</p>
@@ -1308,13 +1308,13 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <div className="border-b border-gray-200 dark:border-gray-700">
+                    <div className="border-b border-gray-200">
                         <nav className="flex space-x-8 px-6" aria-label="Tabs">
                             <button 
                                 onClick={() => setActiveTab('aktif')} 
                                 className={`${
                                     activeTab === 'aktif' 
-                                        ? 'border-blue-500 text-blue-600 bg-blue-50 dark:bg-blue-900/20' 
+                                        ? 'border-blue-500 text-blue-600 bg-blue-50' 
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                 } whitespace-nowrap py-4 px-4 border-b-2 font-medium text-sm rounded-t-lg transition-all duration-200`}
                             >
@@ -1330,7 +1330,7 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
                                 onClick={() => setActiveTab('inaktif')} 
                                 className={`${
                                     activeTab === 'inaktif' 
-                                        ? 'border-red-500 text-red-600 bg-red-50 dark:bg-red-900/20' 
+                                        ? 'border-red-500 text-red-600 bg-red-50' 
                                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                                 } whitespace-nowrap py-4 px-4 border-b-2 font-medium text-sm rounded-t-lg transition-all duration-200`}
                             >
