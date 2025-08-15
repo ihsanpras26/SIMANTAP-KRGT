@@ -49,7 +49,7 @@ const Sidebar = ({
       initial={false}
       animate={{ width: collapsedState ? 80 : 280 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="relative h-screen overflow-y-auto bg-white border-r border-gray-200/60 shadow-lg"
+      className="fixed left-0 top-0 h-full overflow-y-auto bg-white border-r border-gray-200/60 shadow-lg z-40"
     >
       {/* Header */}
       <div className="relative p-6 border-b border-gray-200/60">
@@ -146,7 +146,7 @@ const Sidebar = ({
       </nav>
 
       {/* Footer */}
-      <div className="sticky bottom-0 left-0 right-0 p-4 border-t border-gray-200/60 bg-white">
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200/60 bg-white">
         <AnimatePresence>
           {!collapsedState && (
             <motion.div

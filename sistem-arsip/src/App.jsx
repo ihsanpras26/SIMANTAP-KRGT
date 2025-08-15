@@ -464,7 +464,7 @@ export default function App() {
                     onShowInfo={() => setShowInfoModal(true)}
                 />
                 
-                <div className="flex-1 flex flex-col min-h-screen">
+                <div className="flex-1 flex flex-col min-h-screen" style={{ marginLeft: sidebarCollapsed ? '80px' : '280px', transition: 'margin-left 0.3s ease-in-out' }}>
                     <Header 
                         title={
                             currentView === 'dashboard' ? 'Dashboard' :
@@ -596,8 +596,11 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
     });
     const [file, setFile] = useState(null);
     const [existingFile, setExistingFile] = useState({ fileName: '', filePath: '' });
-    // Note: uploadProgress removed as it's not used in current implementation
     const [isLoading, setIsLoading] = useState(false);
+    const [isDragOver, setIsDragOver] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+    const [currentStep, setCurrentStep] = useState(1);
+    const [validationErrors, setValidationErrors] = useState({});
 
     useEffect(() => {
         if (arsipToEdit) {
@@ -621,15 +624,76 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
     const handleFileChange = (e) => {
         if (e.target.files[0]) {
             setFile(e.target.files[0]);
+            setUploadProgress(100); // Simulasi upload selesai
+        }
+    };
+    
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragOver(true);
+    };
+    
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+    };
+    
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+            setFile(e.dataTransfer.files[0]);
+            
+            // Simulasi progress upload
+            setUploadProgress(0);
+            const interval = setInterval(() => {
+                setUploadProgress(prev => {
+                    if (prev >= 100) {
+                        clearInterval(interval);
+                        return 100;
+                    }
+                    return prev + 10;
+                });
+            }, 100);
         }
     };
 
+    const validateForm = () => {
+        const errors = {};
+        
+        if (!formData.nomorSurat.trim()) errors.nomorSurat = 'Nomor surat wajib diisi';
+        if (!formData.tanggalSurat) errors.tanggalSurat = 'Tanggal surat wajib diisi';
+        if (!formData.pengirim.trim()) errors.pengirim = 'Pengirim wajib diisi';
+        if (!formData.tujuanSurat.trim()) errors.tujuanSurat = 'Tujuan surat wajib diisi';
+        if (!formData.perihal.trim()) errors.perihal = 'Perihal wajib diisi';
+        if (!formData.kodeKlasifikasi) errors.kodeKlasifikasi = 'Kode klasifikasi wajib dipilih';
+        if (formData.kodeKlasifikasi && formData.kodeKlasifikasi.length <= 3) {
+            errors.kodeKlasifikasi = 'Kode klasifikasi harus lebih spesifik';
+        }
+        
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+    
+    const handleNextStep = () => {
+        if (validateForm()) {
+            setCurrentStep(2);
+        }
+    };
+    
+    const handlePrevStep = () => {
+        setCurrentStep(1);
+    };
+    
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (formData.kodeKlasifikasi.length <= 3) {
-            showNotification("Kode klasifikasi harus lebih spesifik.", 'error');
+        
+        if (!validateForm()) {
+            showNotification("Mohon lengkapi semua field yang diperlukan", 'error');
             return;
         }
+        
         setIsLoading(true);
 
         let fileData = {
@@ -742,17 +806,120 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
     }, [klasifikasiList]);
 
     return (
-        <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200 max-w-2xl mx-auto">
-            <h2 className="text-2xl font-bold mb-6 text-gray-900">{arsipToEdit ? 'Edit Arsip' : 'Tambah Arsip Baru'}</h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <InputField name="nomorSurat" label="Nomor Surat" value={formData.nomorSurat} onChange={handleChange} required />
-                <InputField name="tanggalSurat" label="Tanggal Surat" type="date" value={formData.tanggalSurat} onChange={handleChange} required />
-                <InputField name="pengirim" label="Pengirim / Asal Surat" value={formData.pengirim} onChange={handleChange} required />
-                <InputField name="tujuanSurat" label="Tujuan Surat" value={formData.tujuanSurat} onChange={handleChange} required />
-                <InputField name="perihal" label="Perihal / Isi Ringkas" value={formData.perihal} onChange={handleChange} required />
-                <div>
-                    <label htmlFor="kodeKlasifikasi" className="block text-sm font-medium text-gray-700 mb-1">Kode Klasifikasi</label>
-                    <select id="kodeKlasifikasi" name="kodeKlasifikasi" value={formData.kodeKlasifikasi} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-4xl mx-auto overflow-hidden">
+            {/* Header dengan Progress */}
+            <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-6 text-white">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-2xl font-bold">{arsipToEdit ? 'Edit Arsip' : 'Tambah Arsip Baru'}</h2>
+                    <div className="flex items-center gap-2">
+                        <Archive size={24} />
+                        <span className="text-sm opacity-90">SIMANTEP</span>
+                    </div>
+                </div>
+                
+                {/* Progress Steps */}
+                <div className="flex items-center justify-center space-x-4">
+                    <div className={`flex items-center ${currentStep >= 1 ? 'text-white' : 'text-primary-200'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            currentStep >= 1 ? 'bg-white text-primary-600' : 'bg-primary-400'
+                        }`}>
+                            1
+                        </div>
+                        <span className="ml-2 text-sm font-medium">Informasi Dasar</span>
+                    </div>
+                    <div className={`w-8 h-0.5 ${currentStep >= 2 ? 'bg-white' : 'bg-primary-400'}`}></div>
+                    <div className={`flex items-center ${currentStep >= 2 ? 'text-white' : 'text-primary-200'}`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            currentStep >= 2 ? 'bg-white text-primary-600' : 'bg-primary-400'
+                        }`}>
+                            2
+                        </div>
+                        <span className="ml-2 text-sm font-medium">Lampiran & Review</span>
+                    </div>
+                </div>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="p-8">
+                {/* Step 1: Informasi Dasar */}
+                {currentStep === 1 && (
+                    <div className="space-y-6 animate-fadeIn">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <InputField 
+                                    name="nomorSurat" 
+                                    label="Nomor Surat" 
+                                    value={formData.nomorSurat} 
+                                    onChange={handleChange} 
+                                    required 
+                                />
+                                {validationErrors.nomorSurat && (
+                                    <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.nomorSurat}</p>
+                                )}
+                            </div>
+                            <div>
+                                <InputField 
+                                    name="tanggalSurat" 
+                                    label="Tanggal Surat" 
+                                    type="date" 
+                                    value={formData.tanggalSurat} 
+                                    onChange={handleChange} 
+                                    required 
+                                />
+                                {validationErrors.tanggalSurat && (
+                                    <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.tanggalSurat}</p>
+                                )}
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <InputField 
+                                name="pengirim" 
+                                label="Pengirim / Asal Surat" 
+                                value={formData.pengirim} 
+                                onChange={handleChange} 
+                                required 
+                            />
+                            {validationErrors.pengirim && (
+                                <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.pengirim}</p>
+                            )}
+                        </div>
+                        
+                        <div>
+                            <InputField 
+                                name="tujuanSurat" 
+                                label="Tujuan Surat" 
+                                value={formData.tujuanSurat} 
+                                onChange={handleChange} 
+                                required 
+                            />
+                            {validationErrors.tujuanSurat && (
+                                <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.tujuanSurat}</p>
+                            )}
+                        </div>
+                        
+                        <div>
+                            <InputField 
+                                name="perihal" 
+                                label="Perihal / Isi Ringkas" 
+                                value={formData.perihal} 
+                                onChange={handleChange} 
+                                required 
+                            />
+                            {validationErrors.perihal && (
+                                <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.perihal}</p>
+                            )}
+                        </div>
+                        
+                        <div>
+                            <label htmlFor="kodeKlasifikasi" className="block text-sm font-medium text-gray-700 mb-1">Kode Klasifikasi</label>
+                            <select 
+                                id="kodeKlasifikasi" 
+                                name="kodeKlasifikasi" 
+                                value={formData.kodeKlasifikasi} 
+                                onChange={handleChange} 
+                                required 
+                                className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            >
                         <option value="">Pilih Kode Klasifikasi</option>
                         {groupedKlasifikasi.map(group => {
                             if (group.subItems && group.subItems.length > 0) {
@@ -780,37 +947,160 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                 );
                             }
                         })}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Lampiran Berkas</label>
-                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                        <div className="space-y-1 text-center">
-                            <FilePlus className="mx-auto h-12 w-12 text-gray-400" />
-                            <div className="flex text-sm text-gray-600">
-                                <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500">
-                                    <span>Pilih berkas untuk diunggah</span>
-                                    <input id="file-upload" name="file-upload" type="file" className="sr-only" onChange={handleFileChange} />
-                                </label>
-                            </div>
-                            <p className="text-xs text-gray-500">PDF, DOCX, PNG, JPG, dll.</p>
+                            </select>
+                            {validationErrors.kodeKlasifikasi && (
+                                <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.kodeKlasifikasi}</p>
+                            )}
+                        </div>
+                        
+                        {/* Navigation Buttons Step 1 */}
+                        <div className="flex justify-end pt-6">
+                            <button 
+                                type="button" 
+                                onClick={handleNextStep}
+                                className="px-8 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+                            >
+                                Selanjutnya
+                                <ChevronRight size={20} />
+                            </button>
                         </div>
                     </div>
-                    {file && <p className="mt-2 text-sm text-gray-500">Berkas dipilih: {file.name}</p>}
-                    {!file && existingFile.fileName && (
-                         <div className="mt-2 text-sm text-gray-500">
-                            <span>Lampiran saat ini: </span>
-                            <a href={`${supabaseUrl}/storage/v1/object/public/arsip-files/${existingFile.filePath}`} target="_blank" rel="noopener noreferrer" className="font-medium text-primary-600 hover:underline">{existingFile.fileName}</a>
+                )}
+                
+                {/* Step 2: File Upload & Review */}
+                {currentStep === 2 && (
+                    <div className="space-y-6 animate-fadeIn">
+                        {/* Enhanced File Upload with Drag & Drop */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-3">Lampiran Berkas</label>
+                            <div 
+                                className={`relative border-2 border-dashed rounded-xl p-8 transition-all duration-300 ${
+                                    isDragOver 
+                                        ? 'border-primary-400 bg-primary-50 scale-105' 
+                                        : 'border-gray-300 hover:border-primary-300 hover:bg-gray-50'
+                                }`}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                            >
+                                <div className="text-center">
+                                    {file ? (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-center w-16 h-16 mx-auto bg-green-100 rounded-full">
+                                                <CheckCircle className="w-8 h-8 text-green-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-lg font-medium text-gray-900">{file.name}</p>
+                                                <p className="text-sm text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                            </div>
+                                            {uploadProgress > 0 && uploadProgress < 100 && (
+                                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                                    <div 
+                                                        className="bg-primary-600 h-2 rounded-full transition-all duration-300" 
+                                                        style={{ width: `${uploadProgress}%` }}
+                                                    ></div>
+                                                </div>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => { setFile(null); setUploadProgress(0); }}
+                                                className="text-sm text-red-600 hover:text-red-800 font-medium"
+                                            >
+                                                Hapus File
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-4">
+                                            <div className="flex items-center justify-center w-16 h-16 mx-auto bg-primary-100 rounded-full">
+                                                <Upload className="w-8 h-8 text-primary-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-lg font-medium text-gray-900">
+                                                    {isDragOver ? 'Lepaskan file di sini' : 'Drag & drop file atau klik untuk pilih'}
+                                                </p>
+                                                <p className="text-sm text-gray-500 mt-1">PDF, DOCX, PNG, JPG, dll. (Maks. 10MB)</p>
+                                            </div>
+                                            <label className="inline-flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium cursor-pointer transition-colors duration-200">
+                                                <FilePlus className="w-5 h-5 mr-2" />
+                                                Pilih File
+                                                <input 
+                                                    type="file" 
+                                                    className="sr-only" 
+                                                    onChange={handleFileChange}
+                                                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif"
+                                                />
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            
+                            {/* Existing File Display */}
+                            {!file && existingFile.fileName && (
+                                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <FileText className="w-5 h-5 text-blue-600" />
+                                        <div className="flex-1">
+                                            <p className="text-sm font-medium text-blue-900">File saat ini:</p>
+                                            <a 
+                                                href={`${supabaseUrl}/storage/v1/object/public/arsip-files/${existingFile.filePath}`} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer" 
+                                                className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                                            >
+                                                {existingFile.fileName}
+                                            </a>
+                                        </div>
+                                        <Download className="w-4 h-4 text-blue-600" />
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
 
-                <div className="flex justify-end gap-4 pt-4">
-                    <button type="button" onClick={onFinish} className="px-6 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700">Batal</button>
-                    <button type="submit" disabled={isLoading} className="px-6 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50 flex items-center gap-2">
-                        {isLoading ? `Menyimpan...` : (arsipToEdit ? 'Simpan Perubahan' : 'Simpan Arsip')}
-                    </button>
-                </div>
+                        {/* Step 2 Navigation Buttons */}
+                        <div className="flex justify-between pt-6">
+                            <button 
+                                type="button" 
+                                onClick={handlePrevStep}
+                                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+                            >
+                                <ChevronRight className="w-5 h-5 rotate-180" />
+                                Kembali
+                            </button>
+                            
+                            <div className="flex gap-3">
+                                <button 
+                                    type="button" 
+                                    onClick={onFinish} 
+                                    className="px-6 py-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors duration-200"
+                                >
+                                    Batal
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    disabled={isLoading} 
+                                    className="px-8 py-3 rounded-lg bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50 flex items-center gap-2 font-medium transition-colors duration-200"
+                                >
+                                    {isLoading ? (
+                                        <>
+                                            <span className="animate-pulse">Menyimpan</span>
+                                            <span className="flex space-x-1">
+                                                <span className="animate-bounce delay-0">.</span>
+                                                <span className="animate-bounce delay-100">.</span>
+                                                <span className="animate-bounce delay-200">.</span>
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            {arsipToEdit ? 'Simpan Perubahan' : 'Simpan Arsip'}
+                                            <CheckCircle className="w-5 h-5" />
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </form>
         </div>
     );
