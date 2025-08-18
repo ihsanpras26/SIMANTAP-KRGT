@@ -1016,21 +1016,65 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                     value={formData.kodeKlasifikasi} 
                                     onChange={handleChange}
                                     className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                    style={{
+                                        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace'
+                                    }}
                                 >
-                                    <option value="">Pilih Kode Klasifikasi (Opsional)</option>
+                                    <option value="" className="text-gray-500">Pilih Kode Klasifikasi (Opsional)</option>
                                     {groupedKlasifikasi.map(group => {
                                         if (group.subItems && group.subItems.length > 0) {
                                             return (
-                                                <optgroup key={group.id} label={`${group.kode} - ${group.deskripsi}`}>
-                                                    <option key={`main-${group.id}`} value={group.kode}>
-                                                        {group.kode} - {group.deskripsi}
+                                                <optgroup 
+                                                    key={group.id} 
+                                                    label={`${group.kode.toUpperCase()} - ${group.deskripsi.toUpperCase()}`}
+                                                    style={{ fontWeight: 'bold', color: '#1f2937' }}
+                                                >
+                                                    <option 
+                                                        key={`main-${group.id}`} 
+                                                        value={group.kode}
+                                                        style={{ 
+                                                            fontWeight: 'bold', 
+                                                            backgroundColor: '#f3f4f6',
+                                                            color: '#1f2937',
+                                                            fontSize: '14px'
+                                                        }}
+                                                    >
+                                                        📁 {group.kode.toUpperCase()} - {group.deskripsi.toUpperCase()}
                                                     </option>
                                                     {group.subItems.map(item => {
                                                         const indentationLevel = item.kode.split('.').length - 1;
-                                                        const indentString = '\u00A0\u00A0'.repeat(indentationLevel);
+                                                        const isSubCategory = indentationLevel === 1;
+                                                        const isSubSubCategory = indentationLevel >= 2;
+                                                        
+                                                        let prefix = '';
+                                                        let indentString = '';
+                                                        let bgColor = '#ffffff';
+                                                        let textColor = '#374151';
+                                                        
+                                                        if (isSubCategory) {
+                                                            prefix = '├─ 📂 ';
+                                                            indentString = '  ';
+                                                            bgColor = '#f9fafb';
+                                                            textColor = '#4b5563';
+                                                        } else if (isSubSubCategory) {
+                                                            prefix = '└── 📄 ';
+                                                            indentString = '    ';
+                                                            bgColor = '#ffffff';
+                                                            textColor = '#6b7280';
+                                                        }
+                                                        
                                                         return (
-                                                            <option key={item.id} value={item.kode}>
-                                                                {indentString}{item.kode} - {item.deskripsi}
+                                                            <option 
+                                                                key={item.id} 
+                                                                value={item.kode}
+                                                                style={{
+                                                                    backgroundColor: bgColor,
+                                                                    color: textColor,
+                                                                    fontSize: '13px',
+                                                                    paddingLeft: `${8 + indentationLevel * 16}px`
+                                                                }}
+                                                            >
+                                                                {indentString}{prefix}{item.kode} - {item.deskripsi}
                                                             </option>
                                                         )
                                                     })}
@@ -1038,8 +1082,17 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                             );
                                         } else {
                                             return (
-                                                <option key={group.id} value={group.kode}>
-                                                    {group.kode} - {group.deskripsi}
+                                                <option 
+                                                    key={group.id} 
+                                                    value={group.kode}
+                                                    style={{ 
+                                                        fontWeight: 'bold', 
+                                                        backgroundColor: '#f3f4f6',
+                                                        color: '#1f2937',
+                                                        fontSize: '14px'
+                                                    }}
+                                                >
+                                                    📁 {group.kode.toUpperCase()} - {group.deskripsi.toUpperCase()}
                                                 </option>
                                             );
                                         }
@@ -1382,7 +1435,7 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotificati
 };
 
 
-const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabase, listType }) => {
+const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabase, listType, setDeleteConfirmModal }) => {
     const { isItemLoading, deleteArsipOptimistic, confirmArsipDelete, rollbackArsipDelete } = useAppStore();
     
     const getKlasifikasiDesc = (kode) => {
@@ -1390,37 +1443,75 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
         return found ? found.deskripsi : 'Tidak Ditemukan';
     };
 
+    const getKlasifikasiStyle = (kode) => {
+        const parts = kode.split('.');
+        const isMainCategory = parts.length === 1 && parts[0].length === 3;
+        const isSubCategory = parts.length === 2;
+        const isSubSubCategory = parts.length === 3;
+        
+        if (isMainCategory) {
+            return 'font-bold uppercase text-blue-700 bg-blue-50 px-2 py-1 rounded text-sm';
+        } else if (isSubCategory) {
+            return 'font-medium text-green-700 bg-green-50 px-2 py-1 rounded text-sm ml-2';
+        } else if (isSubSubCategory) {
+            return 'text-orange-600 bg-orange-50 px-2 py-1 rounded text-sm ml-4';
+        }
+        return 'text-gray-600';
+    };
+
+    const formatKlasifikasiDisplay = (kode) => {
+        const parts = kode.split('.');
+        const isMainCategory = parts.length === 1 && parts[0].length === 3;
+        const isSubCategory = parts.length === 2;
+        const isSubSubCategory = parts.length === 3;
+        
+        if (isMainCategory) {
+            return `📁 ${kode}`;
+        } else if (isSubCategory) {
+            return `📂 ${kode}`;
+        } else if (isSubSubCategory) {
+            return `📄 ${kode}`;
+        }
+        return kode;
+    };
+
     // Show skeleton if data is still loading
     const isDataLoading = !arsipList || arsipList.length === 0;
 
-    const handleDelete = async (id, filePath) => {
-        if (window.confirm('Apakah Anda yakin ingin menghapus arsip ini secara permanen?')) {
-            // Find the original data for potential rollback
-            const originalData = arsipList.find(arsip => arsip.id === id);
-            
-            try {
-                // Optimistic delete
-                deleteArsipOptimistic(id);
+    const handleDelete = (id, filePath, perihal) => {
+        setDeleteConfirmModal({ 
+            show: true, 
+            id, 
+            filePath,
+            message: `Anda yakin ingin menghapus arsip "${perihal}"? Tindakan ini tidak dapat diurungkan dan akan menghapus file terkait.`,
+            onConfirm: async () => {
+                // Find the original data for potential rollback
+                const originalData = arsipList.find(arsip => arsip.id === id);
                 
-                // Hapus file dari storage jika ada
-                if (filePath) {
-                    const { error: fileError } = await supabase.storage.from('arsip-files').remove([filePath]);
-                    if (fileError) console.warn("Could not delete file:", fileError.message);
-                }
-                // Hapus record dari database
-                const { error: dbError } = await supabase.from('arsip').delete().eq('id', id);
-                if (dbError) {
-                    rollbackArsipDelete(originalData);
-                    throw dbError;
-                }
-                
-                confirmArsipDelete(id);
+                try {
+                    // Optimistic delete
+                    deleteArsipOptimistic(id);
+                    
+                    // Hapus file dari storage jika ada
+                    if (filePath) {
+                        const { error: fileError } = await supabase.storage.from('arsip-files').remove([filePath]);
+                        if (fileError) console.warn("Could not delete file:", fileError.message);
+                    }
+                    // Hapus record dari database
+                    const { error: dbError } = await supabase.from('arsip').delete().eq('id', id);
+                    if (dbError) {
+                        rollbackArsipDelete(originalData);
+                        throw dbError;
+                    }
+                    
+                    confirmArsipDelete(id);
 
-            } catch (error) {
-                console.error("Error deleting document or file:", error);
-                alert("Gagal menghapus arsip.");
+                } catch (error) {
+                    console.error("Error deleting document or file:", error);
+                    alert("Gagal menghapus arsip.");
+                }
             }
-        }
+        });
     };
     
     return (
@@ -1474,13 +1565,17 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                     <td className="p-3 text-gray-600">{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</td>
                                     <td className="p-3 text-gray-600">{retensiDate ? retensiDate.toLocaleDateString('id-ID') : 'N/A'}</td>
                                     <td className={`p-3 font-medium ${statusColor}`}>{status}</td>
-                                    <td className="p-3 text-gray-600" title={getKlasifikasiDesc(arsip.kodeKlasifikasi)}>{arsip.kodeKlasifikasi}</td>
+                                    <td className="p-3" title={getKlasifikasiDesc(arsip.kodeKlasifikasi)}>
+                                        <span className={getKlasifikasiStyle(arsip.kodeKlasifikasi)}>
+                                            {formatKlasifikasiDisplay(arsip.kodeKlasifikasi)}
+                                        </span>
+                                    </td>
                                     <td className="p-3 text-center">
                                         <div className="flex justify-center gap-3">
                                             <button onClick={() => setEditingArsip(arsip)} className="text-primary-500 hover:text-primary-700" title="Edit">
                                                 <Edit size={16} />
                                             </button>
-                                            <button onClick={() => handleDelete(arsip.id, arsip.filePath)} className="text-red-500 hover:text-red-700" title="Hapus">
+                                            <button onClick={() => handleDelete(arsip.id, arsip.filePath, arsip.perihal)} className="text-red-500 hover:text-red-700" title="Hapus">
                                                 <Trash2 size={16} />
                                             </button>
                                         </div>
