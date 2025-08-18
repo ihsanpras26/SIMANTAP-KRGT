@@ -594,6 +594,8 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
         perihal: '',
         kodeKlasifikasi: '',
     });
+    const [manualKodeInput, setManualKodeInput] = useState('');
+    const [useManualKode, setUseManualKode] = useState(false);
     const [file, setFile] = useState(null);
     const [existingFile, setExistingFile] = useState({ fileName: '', filePath: '' });
     const [isLoading, setIsLoading] = useState(false);
@@ -613,12 +615,60 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 kodeKlasifikasi: arsipToEdit.kodeKlasifikasi || '',
             });
             setExistingFile({ fileName: arsipToEdit.fileName, filePath: arsipToEdit.filePath });
+            
+            // Cek apakah kode klasifikasi ada di daftar atau manual
+            if (arsipToEdit.kodeKlasifikasi) {
+                const existsInList = klasifikasiList.find(k => k.kode === arsipToEdit.kodeKlasifikasi);
+                if (!existsInList) {
+                    setUseManualKode(true);
+                    setManualKodeInput(arsipToEdit.kodeKlasifikasi);
+                }
+            }
         }
-    }, [arsipToEdit]);
+    }, [arsipToEdit, klasifikasiList]);
+
+    // Fungsi untuk mengidentifikasi kode klasifikasi dari nomor surat
+    const identifyKlasifikasiFromNomor = (nomorSurat) => {
+        if (!nomorSurat) return null;
+        
+        // Cari pola kode klasifikasi dalam nomor surat (contoh: 001.1, 002.3.1, dll)
+        const kodePattern = /\b(\d{3}(?:\.\d+)*)/g;
+        const matches = nomorSurat.match(kodePattern);
+        
+        if (matches) {
+            // Cari kode yang paling cocok dengan klasifikasi yang ada
+            for (const match of matches) {
+                const foundKlasifikasi = klasifikasiList.find(k => k.kode === match);
+                if (foundKlasifikasi) {
+                    return match;
+                }
+                
+                // Coba cari kode parent jika kode lengkap tidak ditemukan
+                const parts = match.split('.');
+                for (let i = parts.length - 1; i > 0; i--) {
+                    const parentKode = parts.slice(0, i).join('.');
+                    const parentKlasifikasi = klasifikasiList.find(k => k.kode === parentKode);
+                    if (parentKlasifikasi) {
+                        return parentKode;
+                    }
+                }
+            }
+        }
+        return null;
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+        
+        // Auto-identifikasi kode klasifikasi dari nomor surat
+        if (name === 'nomorSurat' && !useManualKode) {
+            const identifiedKode = identifyKlasifikasiFromNomor(value);
+            if (identifiedKode) {
+                setFormData(prev => ({ ...prev, kodeKlasifikasi: identifiedKode }));
+                showNotification(`Kode klasifikasi ${identifiedKode} teridentifikasi dari nomor surat`, 'success');
+            }
+        }
     };
 
     const handleFileChange = (e) => {
@@ -662,14 +712,18 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
     const validateForm = () => {
         const errors = {};
         
-        if (!formData.nomorSurat.trim()) errors.nomorSurat = 'Nomor surat wajib diisi';
+        // Hanya tanggal surat dan perihal yang wajib diisi
         if (!formData.tanggalSurat) errors.tanggalSurat = 'Tanggal surat wajib diisi';
-        if (!formData.pengirim.trim()) errors.pengirim = 'Pengirim wajib diisi';
-        if (!formData.tujuanSurat.trim()) errors.tujuanSurat = 'Tujuan surat wajib diisi';
-        if (!formData.perihal.trim()) errors.perihal = 'Perihal wajib diisi';
-        if (!formData.kodeKlasifikasi) errors.kodeKlasifikasi = 'Kode klasifikasi wajib dipilih';
-        if (formData.kodeKlasifikasi && formData.kodeKlasifikasi.length <= 3) {
-            errors.kodeKlasifikasi = 'Kode klasifikasi harus lebih spesifik';
+        if (!formData.perihal.trim()) errors.perihal = 'Perihal / isi surat wajib diisi';
+        
+        // Validasi kode klasifikasi jika diisi (baik manual maupun dropdown)
+        const kodeToValidate = useManualKode ? manualKodeInput : formData.kodeKlasifikasi;
+        if (kodeToValidate && useManualKode) {
+            // Validasi format kode manual (harus berupa angka dengan titik)
+            const kodePattern = /^\d{3}(\.\d+)*$/;
+            if (!kodePattern.test(kodeToValidate)) {
+                errors.kodeKlasifikasi = 'Format kode klasifikasi tidak valid (contoh: 001.1 atau 002.3.1)';
+            }
         }
         
         setValidationErrors(errors);
@@ -725,11 +779,20 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             };
         }
 
-        const selectedKlasifikasi = klasifikasiList.find(k => k.kode === formData.kodeKlasifikasi);
-        if (!selectedKlasifikasi) {
-            showNotification('Kode klasifikasi tidak valid.', 'error');
-            setIsLoading(false);
-            return;
+        // Tentukan kode klasifikasi yang akan digunakan
+        const finalKodeKlasifikasi = useManualKode ? manualKodeInput : formData.kodeKlasifikasi;
+        
+        let selectedKlasifikasi = null;
+        let retensiAktif = 5; // Default retensi 5 tahun jika tidak ada klasifikasi
+        
+        if (finalKodeKlasifikasi) {
+            selectedKlasifikasi = klasifikasiList.find(k => k.kode === finalKodeKlasifikasi);
+            if (selectedKlasifikasi) {
+                retensiAktif = selectedKlasifikasi.retensiAktif;
+            } else if (useManualKode) {
+                // Jika menggunakan kode manual yang tidak ada di database, gunakan retensi default
+                showNotification('Kode klasifikasi manual akan menggunakan retensi default 5 tahun', 'info');
+            }
         }
         const tglSurat = new Date(formData.tanggalSurat);
         if (isNaN(tglSurat)) {
@@ -737,15 +800,15 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             setIsLoading(false);
             return;
         }
-        const retensiDate = new Date(new Date(tglSurat).setFullYear(tglSurat.getFullYear() + Number(selectedKlasifikasi.retensiAktif)));
+        const retensiDate = new Date(new Date(tglSurat).setFullYear(tglSurat.getFullYear() + Number(retensiAktif)));
 
         const dataToSave = { 
-            nomorSurat: formData.nomorSurat,
+            nomorSurat: formData.nomorSurat || null,
             tanggalSurat: tglSurat.toISOString(),
-            pengirim: formData.pengirim,
-            tujuanSurat: formData.tujuanSurat,
+            pengirim: formData.pengirim || null,
+            tujuanSurat: formData.tujuanSurat || null,
             perihal: formData.perihal,
-            kodeKlasifikasi: formData.kodeKlasifikasi,
+            kodeKlasifikasi: finalKodeKlasifikasi || null,
             tanggalRetensi: retensiDate.toISOString(),
             filePath: fileData.filePath,
             fileName: fileData.fileName,
@@ -809,8 +872,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-4xl mx-auto overflow-hidden">
             {/* Header dengan Progress */}
             <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-6 text-white">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-2xl font-bold">{arsipToEdit ? 'Edit Arsip' : 'Tambah Arsip Baru'}</h2>
+                <div className="flex items-center justify-end mb-4">
                     <div className="flex items-center gap-2">
                         <Archive size={24} />
                         <span className="text-sm opacity-90">SIMANTEP</span>
@@ -849,8 +911,8 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                     name="nomorSurat" 
                                     label="Nomor Surat" 
                                     value={formData.nomorSurat} 
-                                    onChange={handleChange} 
-                                    required 
+                                    onChange={handleChange}
+                                    placeholder="Opsional - sistem akan mencoba mengidentifikasi kode klasifikasi"
                                 />
                                 {validationErrors.nomorSurat && (
                                     <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.nomorSurat}</p>
@@ -859,7 +921,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                             <div>
                                 <InputField 
                                     name="tanggalSurat" 
-                                    label="Tanggal Surat" 
+                                    label="Tanggal Surat *" 
                                     type="date" 
                                     value={formData.tanggalSurat} 
                                     onChange={handleChange} 
@@ -876,8 +938,8 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                 name="pengirim" 
                                 label="Pengirim / Asal Surat" 
                                 value={formData.pengirim} 
-                                onChange={handleChange} 
-                                required 
+                                onChange={handleChange}
+                                placeholder="Opsional"
                             />
                             {validationErrors.pengirim && (
                                 <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.pengirim}</p>
@@ -889,8 +951,8 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                 name="tujuanSurat" 
                                 label="Tujuan Surat" 
                                 value={formData.tujuanSurat} 
-                                onChange={handleChange} 
-                                required 
+                                onChange={handleChange}
+                                placeholder="Opsional"
                             />
                             {validationErrors.tujuanSurat && (
                                 <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.tujuanSurat}</p>
@@ -900,10 +962,11 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                         <div>
                             <InputField 
                                 name="perihal" 
-                                label="Perihal / Isi Ringkas" 
+                                label="Perihal / Isi Surat *" 
                                 value={formData.perihal} 
                                 onChange={handleChange} 
                                 required 
+                                placeholder="Wajib diisi - ringkasan isi surat"
                             />
                             {validationErrors.perihal && (
                                 <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.perihal}</p>
@@ -911,45 +974,88 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                         </div>
                         
                         <div>
-                            <label htmlFor="kodeKlasifikasi" className="block text-sm font-medium text-gray-700 mb-1">Kode Klasifikasi</label>
-                            <select 
-                                id="kodeKlasifikasi" 
-                                name="kodeKlasifikasi" 
-                                value={formData.kodeKlasifikasi} 
-                                onChange={handleChange} 
-                                required 
-                                className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                            >
-                        <option value="">Pilih Kode Klasifikasi</option>
-                        {groupedKlasifikasi.map(group => {
-                            if (group.subItems && group.subItems.length > 0) {
-                                return (
-                                    <optgroup key={group.id} label={`${group.kode} - ${group.deskripsi}`}>
-                                        <option key={`main-${group.id}`} value={group.kode}>
-                                            {group.kode} - {group.deskripsi}
-                                        </option>
-                                        {group.subItems.map(item => {
-                                            const indentationLevel = item.kode.split('.').length - 1;
-                                            const indentString = '\u00A0\u00A0'.repeat(indentationLevel);
+                            <label className="block text-sm font-medium text-gray-700 mb-3">Kode Klasifikasi</label>
+                            
+                            {/* Toggle untuk memilih mode input */}
+                            <div className="flex items-center gap-4 mb-3">
+                                <label className="flex items-center">
+                                    <input
+                                        type="radio"
+                                        name="inputMode"
+                                        checked={!useManualKode}
+                                        onChange={() => setUseManualKode(false)}
+                                        className="mr-2"
+                                    />
+                                    <span className="text-sm">Pilih dari daftar</span>
+                                </label>
+                                <label className="flex items-center">
+                                    <input
+                                        type="radio"
+                                        name="inputMode"
+                                        checked={useManualKode}
+                                        onChange={() => setUseManualKode(true)}
+                                        className="mr-2"
+                                    />
+                                    <span className="text-sm">Input manual</span>
+                                </label>
+                            </div>
+                            
+                            {/* Input berdasarkan mode yang dipilih */}
+                            {useManualKode ? (
+                                <InputField
+                                    name="manualKodeInput"
+                                    value={manualKodeInput}
+                                    onChange={(e) => setManualKodeInput(e.target.value)}
+                                    placeholder="Contoh: 001.1 atau 002.3.1"
+                                    className="w-full"
+                                />
+                            ) : (
+                                <select 
+                                    id="kodeKlasifikasi" 
+                                    name="kodeKlasifikasi" 
+                                    value={formData.kodeKlasifikasi} 
+                                    onChange={handleChange}
+                                    className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                                >
+                                    <option value="">Pilih Kode Klasifikasi (Opsional)</option>
+                                    {groupedKlasifikasi.map(group => {
+                                        if (group.subItems && group.subItems.length > 0) {
                                             return (
-                                                <option key={item.id} value={item.kode}>
-                                                    {indentString}{item.kode} - {item.deskripsi}
+                                                <optgroup key={group.id} label={`${group.kode} - ${group.deskripsi}`}>
+                                                    <option key={`main-${group.id}`} value={group.kode}>
+                                                        {group.kode} - {group.deskripsi}
+                                                    </option>
+                                                    {group.subItems.map(item => {
+                                                        const indentationLevel = item.kode.split('.').length - 1;
+                                                        const indentString = '\u00A0\u00A0'.repeat(indentationLevel);
+                                                        return (
+                                                            <option key={item.id} value={item.kode}>
+                                                                {indentString}{item.kode} - {item.deskripsi}
+                                                            </option>
+                                                        )
+                                                    })}
+                                                </optgroup>
+                                            );
+                                        } else {
+                                            return (
+                                                <option key={group.id} value={group.kode}>
+                                                    {group.kode} - {group.deskripsi}
                                                 </option>
-                                            )
-                                        })}
-                                    </optgroup>
-                                );
-                            } else {
-                                return (
-                                    <option key={group.id} value={group.kode}>
-                                        {group.kode} - {group.deskripsi}
-                                    </option>
-                                );
-                            }
-                        })}
-                            </select>
+                                            );
+                                        }
+                                    })}
+                                </select>
+                            )}
+                            
                             {validationErrors.kodeKlasifikasi && (
                                 <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.kodeKlasifikasi}</p>
+                            )}
+                            
+                            {/* Info tentang auto-identifikasi */}
+                            {!useManualKode && (
+                                <p className="text-xs text-gray-500 mt-2">
+                                    💡 Tip: Sistem akan mencoba mengidentifikasi kode klasifikasi dari nomor surat secara otomatis
+                                </p>
                             )}
                         </div>
                         
