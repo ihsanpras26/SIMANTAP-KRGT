@@ -38,6 +38,7 @@ import {
 import DevIndicator from './components/DevIndicator.jsx'
 import './animations.css'
 import InputField from './InputField.jsx'
+import GoogleDriveUpload from './components/GoogleDriveUpload.jsx'
 
 // --- Konfigurasi Supabase ---
 // Pastikan Anda membuat file .env dan mengisinya
@@ -598,6 +599,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
     const [useManualKode, setUseManualKode] = useState(false);
     const [file, setFile] = useState(null);
     const [existingFile, setExistingFile] = useState({ fileName: '', filePath: '' });
+    const [googleDriveFile, setGoogleDriveFile] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isDragOver, setIsDragOver] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
@@ -615,6 +617,16 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 kodeKlasifikasi: arsipToEdit.kodeKlasifikasi || '',
             });
             setExistingFile({ fileName: arsipToEdit.fileName, filePath: arsipToEdit.filePath });
+            
+            // Set Google Drive file if exists
+            if (arsipToEdit.googleDriveFileId) {
+                setGoogleDriveFile({
+                    id: arsipToEdit.googleDriveFileId,
+                    name: arsipToEdit.fileName,
+                    webViewLink: arsipToEdit.googleDriveViewLink,
+                    downloadLink: arsipToEdit.googleDriveDownloadLink
+                });
+            }
             
             // Cek apakah kode klasifikasi ada di daftar atau manual
             if (arsipToEdit.kodeKlasifikasi) {
@@ -676,6 +688,16 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             setFile(e.target.files[0]);
             setUploadProgress(100); // Simulasi upload selesai
         }
+    };
+    
+    const handleGoogleDriveFileUploaded = (fileData) => {
+        setGoogleDriveFile(fileData);
+        // Clear traditional file if Google Drive file is uploaded
+        setFile(null);
+    };
+    
+    const handleGoogleDriveFileRemoved = () => {
+        setGoogleDriveFile(null);
     };
     
     const handleDragOver = (e) => {
@@ -755,8 +777,18 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             fileName: arsipToEdit?.fileName || null,
         };
 
-        // Handle file upload
-        if (file) {
+        // Handle file upload (Google Drive or traditional)
+        if (googleDriveFile) {
+            // Use Google Drive file data
+            fileData = {
+                filePath: null, // No Supabase storage path for Google Drive files
+                fileName: googleDriveFile.name,
+                googleDriveFileId: googleDriveFile.id,
+                googleDriveViewLink: googleDriveFile.webViewLink,
+                googleDriveDownloadLink: googleDriveFile.downloadLink || googleDriveFile.webContentLink,
+            };
+        } else if (file) {
+            // Traditional file upload to Supabase
             // Jika ada file lama, hapus dulu
             if (arsipToEdit?.filePath) {
                 const { error: deleteError } = await supabase.storage.from('arsip-files').remove([arsipToEdit.filePath]);
@@ -776,6 +808,9 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             fileData = {
                 filePath: newFilePath,
                 fileName: file.name,
+                googleDriveFileId: null,
+                googleDriveViewLink: null,
+                googleDriveDownloadLink: null,
             };
         }
 
@@ -812,6 +847,9 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             tanggalRetensi: retensiDate.toISOString(),
             filePath: fileData.filePath,
             fileName: fileData.fileName,
+            googleDriveFileId: fileData.googleDriveFileId,
+            googleDriveViewLink: fileData.googleDriveViewLink,
+            googleDriveDownloadLink: fileData.googleDriveDownloadLink,
         };
 
         try {
@@ -1129,73 +1167,82 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 {/* Step 2: File Upload & Review */}
                 {currentStep === 2 && (
                     <div className="space-y-6 animate-fadeIn">
-                        {/* Enhanced File Upload with Drag & Drop */}
+                        {/* Google Drive Upload Integration */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-3">Lampiran Berkas</label>
-                            <div 
-                                className={`relative border-2 border-dashed rounded-xl p-8 transition-all duration-300 ${
-                                    isDragOver 
-                                        ? 'border-primary-400 bg-primary-50 scale-105' 
-                                        : 'border-gray-300 hover:border-primary-300 hover:bg-gray-50'
-                                }`}
-                                onDragOver={handleDragOver}
-                                onDragLeave={handleDragLeave}
-                                onDrop={handleDrop}
-                            >
-                                <div className="text-center">
-                                    {file ? (
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-center w-16 h-16 mx-auto bg-green-100 rounded-full">
-                                                <CheckCircle className="w-8 h-8 text-green-600" />
-                                            </div>
-                                            <div>
-                                                <p className="text-lg font-medium text-gray-900">{file.name}</p>
-                                                <p className="text-sm text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                                            </div>
-                                            {uploadProgress > 0 && uploadProgress < 100 && (
-                                                <div className="w-full bg-gray-200 rounded-full h-2">
-                                                    <div 
-                                                        className="bg-primary-600 h-2 rounded-full transition-all duration-300" 
-                                                        style={{ width: `${uploadProgress}%` }}
-                                                    ></div>
+                            <GoogleDriveUpload
+                                onFileUploaded={handleGoogleDriveFileUploaded}
+                                onFileRemoved={handleGoogleDriveFileRemoved}
+                                existingFile={googleDriveFile}
+                                perihal={formData.perihal}
+                                tanggalSurat={formData.tanggalSurat}
+                                disabled={isLoading}
+                            />
+                            
+                            {/* Fallback: Traditional File Upload */}
+                            {!googleDriveFile && (
+                                <div className="mt-4">
+                                    <div className="text-center text-sm text-gray-500 mb-3">
+                                        <span className="bg-gray-100 px-3 py-1 rounded-full">atau upload tradisional</span>
+                                    </div>
+                                    <div 
+                                        className={`relative border-2 border-dashed rounded-xl p-6 transition-all duration-300 ${
+                                            isDragOver 
+                                                ? 'border-primary-400 bg-primary-50 scale-105' 
+                                                : 'border-gray-300 hover:border-primary-300 hover:bg-gray-50'
+                                        }`}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                    >
+                                        <div className="text-center">
+                                            {file ? (
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-center w-12 h-12 mx-auto bg-green-100 rounded-full">
+                                                        <CheckCircle className="w-6 h-6 text-green-600" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                                                        <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { setFile(null); setUploadProgress(0); }}
+                                                        className="text-xs text-red-600 hover:text-red-800 font-medium"
+                                                    >
+                                                        Hapus File
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    <div className="flex items-center justify-center w-12 h-12 mx-auto bg-gray-100 rounded-full">
+                                                        <Upload className="w-6 h-6 text-gray-600" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-900">
+                                                            {isDragOver ? 'Lepaskan file di sini' : 'Upload ke server lokal'}
+                                                        </p>
+                                                        <p className="text-xs text-gray-500 mt-1">PDF, DOCX, PNG, JPG (Maks. 10MB)</p>
+                                                    </div>
+                                                    <label className="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-medium cursor-pointer transition-colors duration-200">
+                                                        <FilePlus className="w-4 h-4 mr-2" />
+                                                        Pilih File
+                                                        <input 
+                                                            type="file" 
+                                                            className="sr-only" 
+                                                            onChange={handleFileChange}
+                                                            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif"
+                                                        />
+                                                    </label>
                                                 </div>
                                             )}
-                                            <button
-                                                type="button"
-                                                onClick={() => { setFile(null); setUploadProgress(0); }}
-                                                className="text-sm text-red-600 hover:text-red-800 font-medium"
-                                            >
-                                                Hapus File
-                                            </button>
                                         </div>
-                                    ) : (
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-center w-16 h-16 mx-auto bg-primary-100 rounded-full">
-                                                <Upload className="w-8 h-8 text-primary-600" />
-                                            </div>
-                                            <div>
-                                                <p className="text-lg font-medium text-gray-900">
-                                                    {isDragOver ? 'Lepaskan file di sini' : 'Drag & drop file atau klik untuk pilih'}
-                                                </p>
-                                                <p className="text-sm text-gray-500 mt-1">PDF, DOCX, PNG, JPG, dll. (Maks. 10MB)</p>
-                                            </div>
-                                            <label className="inline-flex items-center px-6 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium cursor-pointer transition-colors duration-200">
-                                                <FilePlus className="w-5 h-5 mr-2" />
-                                                Pilih File
-                                                <input 
-                                                    type="file" 
-                                                    className="sr-only" 
-                                                    onChange={handleFileChange}
-                                                    accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif"
-                                                />
-                                            </label>
-                                        </div>
-                                    )}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                             
-                            {/* Existing File Display */}
-                            {!file && existingFile.fileName && (
+                            {/* Existing File Display for Legacy Files */}
+                            {!file && !googleDriveFile && existingFile.fileName && (
                                 <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                                     <div className="flex items-center gap-3">
                                         <FileText className="w-5 h-5 text-blue-600" />

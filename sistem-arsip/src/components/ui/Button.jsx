@@ -40,9 +40,16 @@ const Button = React.forwardRef(({
       )}
       ref={ref}
       disabled={disabled || loading}
-      whileHover={!disabled && !loading ? { scale: 1.02 } : {}}
-      whileTap={!disabled && !loading ? { scale: 0.98 } : {}}
-      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+      whileHover={!disabled && !loading ? { 
+        y: -2,
+        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+        filter: 'brightness(1.05)'
+      } : {}}
+      whileTap={!disabled && !loading ? { 
+        y: 0,
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+      } : {}}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       {...props}
     >
       {loading && (
