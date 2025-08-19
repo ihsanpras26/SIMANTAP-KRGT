@@ -1255,7 +1255,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
 
                         
                         {/* Existing File Display for Legacy Files */}
-                        {!file && !googleDriveFile && existingFile.fileName && (
+                        {!googleDriveFile && existingFile.fileName && (
                                 <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                                     <div className="flex items-center gap-3">
                                         <FileText className="w-5 h-5 text-blue-600" />
@@ -1522,6 +1522,21 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotificati
 
 const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabase, listType, setDeleteConfirmModal }) => {
     const { isItemLoading, deleteArsipOptimistic, confirmArsipDelete, rollbackArsipDelete } = useAppStore();
+    const [expandedKlasifikasi, setExpandedKlasifikasi] = useState({});
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (!event.target.closest('.klasifikasi-dropdown')) {
+                setExpandedKlasifikasi({});
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
     
     const getKlasifikasiDesc = (kode) => {
         const found = klasifikasiList.find(k => k.kode === kode);
@@ -1558,6 +1573,59 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
             return `📄 ${kode}`;
         }
         return kode;
+    };
+
+    const toggleKlasifikasiDropdown = (arsipId) => {
+        setExpandedKlasifikasi(prev => ({
+            ...prev,
+            [arsipId]: !prev[arsipId]
+        }));
+    };
+
+    const getKlasifikasiHierarchy = (kode) => {
+        const parts = kode.split('.');
+        const hierarchy = [];
+        
+        // Main category (e.g., "000")
+        if (parts.length >= 1) {
+            const mainCode = parts[0];
+            const mainKlasifikasi = klasifikasiList.find(k => k.kode === mainCode);
+            if (mainKlasifikasi) {
+                hierarchy.push({
+                    kode: mainCode,
+                    deskripsi: mainKlasifikasi.deskripsi,
+                    level: 'main'
+                });
+            }
+        }
+        
+        // Sub category (e.g., "000.01")
+        if (parts.length >= 2) {
+            const subCode = `${parts[0]}.${parts[1]}`;
+            const subKlasifikasi = klasifikasiList.find(k => k.kode === subCode);
+            if (subKlasifikasi) {
+                hierarchy.push({
+                    kode: subCode,
+                    deskripsi: subKlasifikasi.deskripsi,
+                    level: 'sub'
+                });
+            }
+        }
+        
+        // Sub-sub category (e.g., "000.01.01")
+        if (parts.length >= 3) {
+            const subSubCode = kode;
+            const subSubKlasifikasi = klasifikasiList.find(k => k.kode === subSubCode);
+            if (subSubKlasifikasi) {
+                hierarchy.push({
+                    kode: subSubCode,
+                    deskripsi: subSubKlasifikasi.deskripsi,
+                    level: 'subsub'
+                });
+            }
+        }
+        
+        return hierarchy;
     };
 
     // Show skeleton if data is still loading
@@ -1670,10 +1738,59 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                     <td className="p-3 text-gray-600">{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</td>
                                     <td className="p-3 text-gray-600">{retensiDate ? retensiDate.toLocaleDateString('id-ID') : 'N/A'}</td>
                                     <td className={`p-3 font-medium ${statusColor}`}>{status}</td>
-                                    <td className="p-3" title={getKlasifikasiDesc(arsip.kodeKlasifikasi)}>
-                                        <span className={getKlasifikasiStyle(arsip.kodeKlasifikasi)}>
-                                            {formatKlasifikasiDisplay(arsip.kodeKlasifikasi)}
-                                        </span>
+                                    <td className="p-3 relative">
+                                         <div className="relative klasifikasi-dropdown">
+                                            <button 
+                                                onClick={() => toggleKlasifikasiDropdown(arsip.id)}
+                                                className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors duration-200 w-full text-left"
+                                                title="Klik untuk melihat hierarki klasifikasi"
+                                            >
+                                                <span className={getKlasifikasiStyle(arsip.kodeKlasifikasi)}>
+                                                    {formatKlasifikasiDisplay(arsip.kodeKlasifikasi)}
+                                                </span>
+                                                <ChevronRight 
+                                                    size={14} 
+                                                    className={`transition-transform duration-200 ${
+                                                        expandedKlasifikasi[arsip.id] ? 'rotate-90' : ''
+                                                    }`}
+                                                />
+                                            </button>
+                                            
+                                            {expandedKlasifikasi[arsip.id] && (
+                                                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-80 max-w-96">
+                                                    <div className="p-3 space-y-2">
+                                                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                                                            Hierarki Klasifikasi
+                                                        </div>
+                                                        {getKlasifikasiHierarchy(arsip.kodeKlasifikasi).map((item, index) => (
+                                                            <div key={item.kode} className={`flex items-start gap-3 p-2 rounded ${
+                                                                item.level === 'main' ? 'bg-blue-50 border-l-4 border-blue-400' :
+                                                                item.level === 'sub' ? 'bg-green-50 border-l-4 border-green-400 ml-4' :
+                                                                'bg-orange-50 border-l-4 border-orange-400 ml-8'
+                                                            }`}>
+                                                                <div className="flex-shrink-0 mt-0.5">
+                                                                    {item.level === 'main' && <span className="text-blue-600">📁</span>}
+                                                                    {item.level === 'sub' && <span className="text-green-600">📂</span>}
+                                                                    {item.level === 'subsub' && <span className="text-orange-600">📄</span>}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className={`font-medium text-sm ${
+                                                                        item.level === 'main' ? 'text-blue-800' :
+                                                                        item.level === 'sub' ? 'text-green-800' :
+                                                                        'text-orange-800'
+                                                                    }`}>
+                                                                        {item.kode}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-600 mt-1 break-words">
+                                                                        {item.deskripsi}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="p-3 text-center">
                                         <div className="flex justify-center gap-2">
