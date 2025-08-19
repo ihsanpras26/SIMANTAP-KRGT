@@ -2239,6 +2239,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                 </div>
                             </div>
                         )}
+                    </>
                 )}
             </div>
         </div>
