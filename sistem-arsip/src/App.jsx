@@ -39,6 +39,7 @@ import DevIndicator from './components/DevIndicator.jsx'
 import './animations.css'
 import InputField from './InputField.jsx'
 import GoogleDriveUpload from './components/GoogleDriveUpload.jsx'
+import { parseGoogleDriveLink, isValidGoogleDriveLink } from './utils/googleDriveUtils.js'
 
 // --- Konfigurasi Supabase ---
 // Pastikan Anda membuat file .env dan mengisinya
@@ -596,6 +597,11 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
         kodeKlasifikasi: '',
         googleDriveLink: '',
     });
+    const [googleDriveInfo, setGoogleDriveInfo] = useState({
+        fileId: '',
+        viewLink: '',
+        downloadLink: ''
+    });
     const [manualKodeInput, setManualKodeInput] = useState('');
     const [useManualKode, setUseManualKode] = useState(false);
     const [existingFile, setExistingFile] = useState({ fileName: '', filePath: '' });
@@ -627,6 +633,18 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                     webViewLink: arsipToEdit.googleDriveViewLink,
                     downloadLink: arsipToEdit.googleDriveLink
                 });
+            }
+            
+            // Process existing Google Drive link to extract info
+            if (arsipToEdit.googleDriveLink && isValidGoogleDriveLink(arsipToEdit.googleDriveLink)) {
+                const driveInfo = parseGoogleDriveLink(arsipToEdit.googleDriveLink);
+                if (driveInfo.success) {
+                    setGoogleDriveInfo({
+                        fileId: driveInfo.fileId,
+                        viewLink: driveInfo.links.viewLink,
+                        downloadLink: driveInfo.links.downloadLink
+                    });
+                }
             }
             
             // Cek apakah kode klasifikasi ada di daftar atau manual
@@ -682,6 +700,29 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 showNotification(`Kode klasifikasi ${identifiedKode} teridentifikasi dari nomor surat`, 'success');
             }
         }
+        
+        // Auto-ekstrak Google Drive file ID dan view link
+        if (name === 'googleDriveLink' && value.trim()) {
+            const driveInfo = parseGoogleDriveLink(value.trim());
+            if (driveInfo.isValid) {
+                setGoogleDriveInfo({
+                    fileId: driveInfo.fileId,
+                    viewLink: driveInfo.links.viewLink,
+                    downloadLink: driveInfo.links.downloadLink
+                });
+                
+                // Normalisasi link ke format view yang konsisten
+                if (value.trim() !== driveInfo.links.viewLink) {
+                    setFormData(prev => ({ ...prev, googleDriveLink: driveInfo.links.viewLink }));
+                    showNotification('Link Google Drive dinormalisasi ke format standar', 'info');
+                }
+            } else {
+                setGoogleDriveInfo({ fileId: '', viewLink: '', downloadLink: '' });
+            }
+        } else if (name === 'googleDriveLink' && !value.trim()) {
+            // Reset Google Drive info jika link dikosongkan
+            setGoogleDriveInfo({ fileId: '', viewLink: '', downloadLink: '' });
+        }
     };
 
     const handleGoogleDriveFileUploaded = (fileData) => {
@@ -711,8 +752,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
         
         // Validasi Google Drive link jika diisi
         if (formData.googleDriveLink && formData.googleDriveLink.trim()) {
-            const gdriveLinkPattern = /^https:\/\/drive\.google\.com\/(file\/d\/[a-zA-Z0-9_-]+|open\?id=[a-zA-Z0-9_-]+)/;
-            if (!gdriveLinkPattern.test(formData.googleDriveLink.trim())) {
+            if (!isValidGoogleDriveLink(formData.googleDriveLink.trim())) {
                 errors.googleDriveLink = 'Link Google Drive tidak valid. Pastikan menggunakan link sharing yang benar.';
             }
         }
@@ -791,9 +831,9 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             tanggalRetensi: retensiDate.toISOString(),
             filePath: fileData.filePath,
             fileName: fileData.fileName,
-            googleDriveFileId: fileData.googleDriveFileId,
-            googleDriveViewLink: fileData.googleDriveViewLink,
-            googleDriveLink: fileData.googleDriveLink || formData.googleDriveLink || null,
+            googleDriveFileId: googleDriveInfo.fileId || fileData.googleDriveFileId,
+            googleDriveViewLink: googleDriveInfo.viewLink || fileData.googleDriveViewLink,
+            googleDriveLink: formData.googleDriveLink || null,
         };
 
         try {
@@ -1170,6 +1210,44 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                 </div>
                                 {validationErrors.googleDriveLink && (
                                     <p className="text-red-500 text-sm animate-shake">{validationErrors.googleDriveLink}</p>
+                                )}
+                                
+                                {/* Google Drive Info Display */}
+                                {googleDriveInfo.fileId && (
+                                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                                        <div className="flex items-center gap-2 text-green-800">
+                                            <CheckCircle className="w-4 h-4" />
+                                            <span className="font-medium text-sm">Link Google Drive berhasil diproses</span>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                                            <div className="bg-white rounded p-3 border border-green-100">
+                                                <label className="block font-medium text-gray-700 mb-1">File ID:</label>
+                                                <code className="text-green-700 bg-green-50 px-2 py-1 rounded text-xs break-all">
+                                                    {googleDriveInfo.fileId}
+                                                </code>
+                                            </div>
+                                            <div className="bg-white rounded p-3 border border-green-100">
+                                                <label className="block font-medium text-gray-700 mb-1">View Link:</label>
+                                                <div className="flex items-center gap-2">
+                                                    <code className="text-green-700 bg-green-50 px-2 py-1 rounded text-xs flex-1 truncate">
+                                                        {googleDriveInfo.viewLink}
+                                                    </code>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => window.open(googleDriveInfo.viewLink, '_blank')}
+                                                        className="text-green-600 hover:text-green-800 p-1"
+                                                        title="Buka di Google Drive"
+                                                    >
+                                                        <Eye className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-xs text-green-700 bg-green-100 rounded p-2">
+                                            💡 <strong>Otomatis:</strong> File ID dan view link telah diekstrak dari link yang Anda masukkan. 
+                                            Data ini akan disimpan secara otomatis ke database.
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         </div>
