@@ -400,6 +400,52 @@ export default function App() {
                         <div className="text-sm text-gray-500">Mohon tunggu sebentar</div>
                     </div>
                 </div>
+                
+                {/* Advanced Search Panel */}
+                {showAdvancedSearch && (
+                    <div className="px-4 pb-4 border-b border-gray-100">
+                        <div className="bg-gray-50 rounded-lg p-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {/* Date Range */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Tanggal Mulai</label>
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Tanggal Akhir</label>
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    />
+                                </div>
+                                <div className="flex items-end">
+                                    <Button
+                                        onClick={() => {
+                                            setStartDate('');
+                                            setEndDate('');
+                                            setSearchTerm('');
+                                            setFilterStatus('semua');
+                                            setFilterKlasifikasi('semua');
+                                        }}
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full h-[38px] text-sm"
+                                    >
+                                        <X size={14} className="mr-1" />
+                                        Reset
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         );
     }
@@ -411,8 +457,6 @@ export default function App() {
                 return <ArsipForm {...props} arsipToEdit={editingArsip} onFinish={() => navigate('dashboard')} />;
             case 'klasifikasi':
                 return <KlasifikasiManager {...props} openModal={() => setShowKlasifikasiModal(true)} />;
-            case 'cari':
-                 return <AdvancedSearchView {...props} />;
             case 'semua':
                  return <ArsipList {...props} title="Semua Arsip" arsipList={arsipList} setEditingArsip={(a) => { setEditingArsip(a); navigate('tambah'); }} listType="semua" />;
             case 'laporan':
@@ -427,7 +471,6 @@ export default function App() {
         { id: 'tambah', label: 'Tambah Arsip', icon: FilePlus, view: 'tambah' },
         { id: 'semua', label: 'Semua Arsip', icon: Layers, view: 'semua' },
         { id: 'klasifikasi', label: 'Kode Klasifikasi', icon: FolderKanban, view: 'klasifikasi' },
-        { id: 'cari', label: 'Pencarian Lanjutan', icon: Search, view: 'cari' },
         { id: 'laporan', label: 'Laporan', icon: FileText, view: 'laporan' },
     ];
 
@@ -1568,6 +1611,9 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
     const [filterKlasifikasi, setFilterKlasifikasi] = useState('semua');
     const [viewMode, setViewMode] = useState('table');
     const [currentPage, setCurrentPage] = useState(1);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
     const itemsPerPage = 15;
 
     // Close dropdown when clicking outside
@@ -1683,8 +1729,12 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
             const searchMatch = !searchTerm || 
                 arsip.perihal.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 arsip.nomorSurat.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                arsip.tujuanSurat.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 getKlasifikasiDesc(arsip.kodeKlasifikasi).toLowerCase().includes(searchTerm.toLowerCase());
+            
+            // Date range filter
+            const arsipDate = new Date(arsip.tanggalSurat);
+            const dateMatch = (!startDate || arsipDate >= new Date(startDate)) &&
+                             (!endDate || arsipDate <= new Date(endDate));
             
             // Status filter
             const today = new Date();
@@ -1698,7 +1748,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
             const klasifikasiMatch = filterKlasifikasi === 'semua' || 
                 arsip.kodeKlasifikasi.startsWith(filterKlasifikasi);
             
-            return searchMatch && statusMatch && klasifikasiMatch;
+            return searchMatch && dateMatch && statusMatch && klasifikasiMatch;
         });
         
         // Sort data
@@ -1740,7 +1790,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
         });
         
         return filtered;
-    }, [arsipList, searchTerm, sortBy, sortOrder, filterStatus, filterKlasifikasi, klasifikasiList]);
+    }, [arsipList, searchTerm, sortBy, sortOrder, filterStatus, filterKlasifikasi, startDate, endDate, klasifikasiList]);
     
     // Pagination
     const totalPages = Math.ceil(filteredAndSortedData.length / itemsPerPage);
@@ -1752,7 +1802,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
     // Reset page when filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, filterStatus, filterKlasifikasi, sortBy, sortOrder]);
+    }, [searchTerm, filterStatus, filterKlasifikasi, sortBy, sortOrder, startDate, endDate]);
     
     // Show skeleton if data is still loading
     const isDataLoading = !arsipList || arsipList.length === 0;
@@ -1830,12 +1880,25 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                             <input
                                 type="text"
-                                placeholder="Cari perihal, nomor surat, tujuan..."
+                                placeholder="Cari perihal, nomor surat..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                             />
                         </div>
+                    </div>
+                    
+                    {/* Advanced Search Toggle */}
+                    <div>
+                        <Button
+                            onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                            variant={showAdvancedSearch ? "default" : "outline"}
+                            size="sm"
+                            className="w-full h-[38px] text-sm"
+                        >
+                            <Filter size={14} className="mr-1" />
+                            Filter
+                        </Button>
                     </div>
                     
                     {/* Status Filter */}
@@ -1935,11 +1998,10 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                         <tr className="border-b border-gray-200">
                                             <th className="text-left py-3 px-4 font-medium text-gray-700 w-48">Nomor Surat</th>
                                             <th className="text-left py-3 px-4 font-medium text-gray-700">Perihal</th>
-                                            <th className="text-left py-3 px-4 font-medium text-gray-700 w-32">Tujuan</th>
                                             <th className="text-left py-3 px-4 font-medium text-gray-700 w-28">Tanggal Surat</th>
                                             <th className="text-left py-3 px-4 font-medium text-gray-700 w-24">Status</th>
                                             <th className="text-left py-3 px-4 font-medium text-gray-700 w-40">Klasifikasi</th>
-                                            <th className="text-center py-3 px-4 font-medium text-gray-700 w-32">Aksi</th>
+                                            <th className="text-center py-3 px-4 font-medium text-gray-700 w-36">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1963,7 +2025,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                                 {arsip.googleDriveLink && (
                                                                     <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="Dokumen tersedia di Google Drive">
                                                                         <Eye size={10} className="mr-1" />
-                                                                        GDrive
+                                                                        Online
                                                                     </span>
                                                                 )}
                                                                 {arsip.filePath && !arsip.googleDriveLink && (
@@ -1982,10 +2044,9 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                         </div>
                                                     </td>
                                                     <td className="py-4 px-4">
-                                                        <span className="font-medium text-gray-900">{arsip.perihal}</span>
-                                                    </td>
-                                                    <td className="py-4 px-4 text-gray-600">{arsip.tujuanSurat}</td>
-                                                    <td className="py-4 px-4 text-gray-600">{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</td>
+                                        <span className="font-medium text-gray-900">{arsip.perihal}</span>
+                                    </td>
+                                    <td className="py-4 px-4 text-gray-600">{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</td>
                                                     <td className={`py-4 px-4 font-medium ${statusColor}`}>
                                                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                                                             status === 'Aktif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
@@ -2070,6 +2131,13 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                                 </button>
                                                             )}
                                                             <button 
+                                                                onClick={() => alert('Detail arsip: ' + JSON.stringify(arsip, null, 2))} 
+                                                                className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200" 
+                                                                title="Detail Arsip"
+                                                            >
+                                                                <Info size={14} />
+                                                            </button>
+                                                            <button 
                                                                 onClick={() => setEditingArsip(arsip)} 
                                                                 className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200" 
                                                                 title="Edit Arsip"
@@ -2100,7 +2168,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                 <div className="flex items-center gap-2">
                                                     {arsip.googleDriveLink && (
                                                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                            GDrive
+                                                            Online
                                                         </span>
                                                     )}
                                                     {arsip.filePath && !arsip.googleDriveLink && (
@@ -2116,8 +2184,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                             </div>
                                             
                                             <h4 className="font-medium text-gray-900 mb-2 line-clamp-2">{arsip.perihal}</h4>
-                                            <p className="text-sm text-gray-600 mb-1">No: {arsip.nomorSurat}</p>
-                                            <p className="text-sm text-gray-600 mb-2">Tujuan: {arsip.tujuanSurat}</p>
+                                            <p className="text-sm text-gray-600 mb-2">No: {arsip.nomorSurat}</p>
                                             
                                             <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
                                                 <span>{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</span>
@@ -2146,6 +2213,13 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                             <Eye size={14} />
                                                         </button>
                                                     )}
+                                                    <button 
+                                                        onClick={() => alert('Detail arsip: ' + JSON.stringify(arsip, null, 2))} 
+                                                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200" 
+                                                        title="Detail Arsip"
+                                                    >
+                                                        <Info size={14} />
+                                                    </button>
                                                     <button 
                                                         onClick={() => setEditingArsip(arsip)} 
                                                         className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200" 
@@ -2229,153 +2303,8 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
     );
 };
 
-const AdvancedSearchView = ({ arsipList, ...props }) => {
-    const [filters, setFilters] = useState({
-        keyword: '',
-        startDate: '',
-        endDate: '',
-        status: 'semua',
-        klasifikasi: 'semua'
-    });
 
-    const handleFilterChange = (e) => {
-        const { name, value } = e.target;
-        setFilters(prev => ({ ...prev, [name]: value }));
-    };
 
-    const resetFilters = () => {
-        setFilters({
-            keyword: '',
-            startDate: '',
-            endDate: '',
-            status: 'semua',
-            klasifikasi: 'semua'
-        });
-    };
-
-    const filteredArsip = useMemo(() => {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        return (arsipList || []).filter(arsip => {
-            if (filters.keyword) {
-                const keyword = filters.keyword.toLowerCase();
-                const searchable = `${arsip.perihal || ''} ${arsip.nomorSurat || ''} ${arsip.pengirim || ''} ${arsip.tujuanSurat || ''}`.toLowerCase();
-                if (!searchable.includes(keyword)) return false;
-            }
-            if (filters.status !== 'semua') {
-                const retensiDate = new Date(arsip.tanggalRetensi);
-                const isInactive = retensiDate && retensiDate < today;
-                if (filters.status === 'aktif' && isInactive) return false;
-                if (filters.status === 'inaktif' && !isInactive) return false;
-            }
-            if (filters.klasifikasi !== 'semua' && arsip.kodeKlasifikasi !== filters.klasifikasi) {
-                return false;
-            }
-            const tglSurat = new Date(arsip.tanggalSurat);
-            if (filters.startDate && (!tglSurat || tglSurat < new Date(filters.startDate))) {
-                return false;
-            }
-            if (filters.endDate && (!tglSurat || tglSurat > new Date(filters.endDate))) {
-                 return false;
-            }
-            return true;
-        });
-    }, [arsipList, filters]);
-
-    return (
-        <div className="space-y-6">
-             <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div className="lg:col-span-2">
-                        <InputField name="keyword" label="Kata Kunci" value={filters.keyword} onChange={handleFilterChange} placeholder="Perihal, nomor surat..." />
-                    </div>
-                    <div>
-                        <InputField name="startDate" label="Dari Tanggal" type="date" value={filters.startDate} onChange={handleFilterChange} />
-                    </div>
-                    <div>
-                        <InputField name="endDate" label="Sampai Tanggal" type="date" value={filters.endDate} onChange={handleFilterChange} />
-                    </div>
-                    <div>
-                        <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                        <select name="status" id="status" value={filters.status} onChange={handleFilterChange} className="w-full px-3 py-2 text-sm border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
-                            <option value="semua">Semua</option>
-                            <option value="aktif">Aktif</option>
-                            <option value="inaktif">Inaktif</option>
-                        </select>
-                    </div>
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-4">
-                    <div className="lg:col-span-3">
-                        <label htmlFor="klasifikasi" className="block text-sm font-medium text-gray-700 mb-1">Klasifikasi</label>
-                        <select 
-                            name="klasifikasi" 
-                            id="klasifikasi" 
-                            value={filters.klasifikasi} 
-                            onChange={handleFilterChange} 
-                            className="w-full px-3 py-2 text-sm border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                            style={{
-                                fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace'
-                            }}
-                        >
-                           <option value="semua">Semua</option>
-                           {(props.klasifikasiList || []).sort((a,b) => (a.kode || '').localeCompare(b.kode || '', undefined, {numeric: true})).map(k => {
-                               const parts = k.kode.split('.');
-                               const isMainCategory = parts.length === 1 && parts[0].length === 3;
-                               const isSubCategory = parts.length === 2;
-                               const isSubSubCategory = parts.length === 3;
-                               const indentationLevel = parts.length - 1;
-                               
-                               let icon = '';
-                               let bgColor = '#ffffff';
-                               let textColor = '#374151';
-                               
-                               if (isMainCategory) {
-                                   icon = '📁';
-                                   bgColor = '#eff6ff';
-                                   textColor = '#1e40af';
-                               } else if (isSubCategory) {
-                                   icon = '📂';
-                                   bgColor = '#f0fdf4';
-                                   textColor = '#15803d';
-                               } else if (isSubSubCategory) {
-                                   icon = '📄';
-                                   bgColor = '#fff7ed';
-                                   textColor = '#ea580c';
-                               } else {
-                                   icon = '📄';
-                                   bgColor = '#f9fafb';
-                                   textColor = '#6b7280';
-                               }
-                               
-                               return (
-                                   <option 
-                                       key={k.id} 
-                                       value={k.kode}
-                                       style={{
-                                           backgroundColor: bgColor,
-                                           color: textColor,
-                                           fontSize: '13px',
-                                           paddingLeft: `${8 + indentationLevel * 16}px`
-                                       }}
-                                   >
-                                       {icon} {k.kode} - {k.deskripsi}
-                                   </option>
-                               );
-                           })}
-                        </select>
-                    </div>
-                    <div className="flex items-end">
-                        <button onClick={resetFilters} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors duration-200">
-                            <X size={14} /> Reset
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <ArsipList {...props} title={`${filteredArsip.length} arsip ditemukan`} arsipList={filteredArsip} setEditingArsip={(a) => { props.setEditingArsip(a); props.navigate('tambah'); }} listType="pencarian" />
-        </div>
-    );
-};
 
 const ReportingView = ({ arsipList, klasifikasiList }) => {
     // Logika komponen ini tidak perlu diubah karena hanya memproses data yang sudah ada di client
