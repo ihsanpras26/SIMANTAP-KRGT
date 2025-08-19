@@ -37,6 +37,23 @@ import {
 
 import DevIndicator from './components/DevIndicator.jsx'
 import './animations.css'
+
+// Add line-clamp utility styles
+const lineClampStyles = `
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleElement = document.createElement('style');
+  styleElement.textContent = lineClampStyles;
+  document.head.appendChild(styleElement);
+}
 import InputField from './InputField.jsx'
 import GoogleDriveUpload from './components/GoogleDriveUpload.jsx'
 import { parseGoogleDriveLink, isValidGoogleDriveLink } from './utils/googleDriveUtils.js'
@@ -1523,6 +1540,14 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotificati
 const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabase, listType, setDeleteConfirmModal }) => {
     const { isItemLoading, deleteArsipOptimistic, confirmArsipDelete, rollbackArsipDelete } = useAppStore();
     const [expandedKlasifikasi, setExpandedKlasifikasi] = useState({});
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortBy, setSortBy] = useState('tanggalSurat');
+    const [sortOrder, setSortOrder] = useState('desc');
+    const [filterStatus, setFilterStatus] = useState('semua');
+    const [filterKlasifikasi, setFilterKlasifikasi] = useState('semua');
+    const [viewMode, setViewMode] = useState('table');
+    const [currentPage, setCurrentPage] = useState(1);
+    const itemsPerPage = 12;
 
     // Close dropdown when clicking outside
     useEffect(() => {
@@ -1628,8 +1653,101 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
         return hierarchy;
     };
 
+    // Filter and sort data
+    const filteredAndSortedData = useMemo(() => {
+        if (!arsipList) return [];
+        
+        let filtered = arsipList.filter(arsip => {
+            // Search filter
+            const searchMatch = !searchTerm || 
+                arsip.perihal.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                arsip.nomorSurat.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                arsip.tujuanSurat.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                getKlasifikasiDesc(arsip.kodeKlasifikasi).toLowerCase().includes(searchTerm.toLowerCase());
+            
+            // Status filter
+            const today = new Date();
+            const retensiDate = new Date(arsip.tanggalRetensi);
+            const isActive = !retensiDate || today <= retensiDate;
+            const statusMatch = filterStatus === 'semua' || 
+                (filterStatus === 'aktif' && isActive) ||
+                (filterStatus === 'inaktif' && !isActive);
+            
+            // Klasifikasi filter
+            const klasifikasiMatch = filterKlasifikasi === 'semua' || 
+                arsip.kodeKlasifikasi.startsWith(filterKlasifikasi);
+            
+            return searchMatch && statusMatch && klasifikasiMatch;
+        });
+        
+        // Sort data
+        filtered.sort((a, b) => {
+            let aValue, bValue;
+            
+            switch (sortBy) {
+                case 'perihal':
+                    aValue = a.perihal.toLowerCase();
+                    bValue = b.perihal.toLowerCase();
+                    break;
+                case 'nomorSurat':
+                    aValue = a.nomorSurat.toLowerCase();
+                    bValue = b.nomorSurat.toLowerCase();
+                    break;
+                case 'tanggalSurat':
+                    aValue = new Date(a.tanggalSurat);
+                    bValue = new Date(b.tanggalSurat);
+                    break;
+                case 'tanggalRetensi':
+                    aValue = new Date(a.tanggalRetensi);
+                    bValue = new Date(b.tanggalRetensi);
+                    break;
+                case 'status':
+                    const todayForSort = new Date();
+                    const aRetensi = new Date(a.tanggalRetensi);
+                    const bRetensi = new Date(b.tanggalRetensi);
+                    aValue = (!aRetensi || todayForSort <= aRetensi) ? 'aktif' : 'inaktif';
+                    bValue = (!bRetensi || todayForSort <= bRetensi) ? 'aktif' : 'inaktif';
+                    break;
+                default:
+                    aValue = a[sortBy];
+                    bValue = b[sortBy];
+            }
+            
+            if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+        
+        return filtered;
+    }, [arsipList, searchTerm, sortBy, sortOrder, filterStatus, filterKlasifikasi, klasifikasiList]);
+    
+    // Pagination
+    const totalPages = Math.ceil(filteredAndSortedData.length / itemsPerPage);
+    const paginatedData = filteredAndSortedData.slice(
+        (currentPage - 1) * itemsPerPage,
+        currentPage * itemsPerPage
+    );
+    
+    // Reset page when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filterStatus, filterKlasifikasi, sortBy, sortOrder]);
+    
     // Show skeleton if data is still loading
     const isDataLoading = !arsipList || arsipList.length === 0;
+    
+    // Get unique klasifikasi for filter dropdown
+    const uniqueKlasifikasi = useMemo(() => {
+        if (!arsipList) return [];
+        const codes = [...new Set(arsipList.map(arsip => {
+            const parts = arsip.kodeKlasifikasi.split('.');
+            return parts[0]; // Get main category
+        }))];
+        return codes.map(code => {
+            const klasifikasi = klasifikasiList.find(k => k.kode === code);
+            return { kode: code, deskripsi: klasifikasi?.deskripsi || code };
+        });
+    }, [arsipList, klasifikasiList]);
 
     const handleDelete = (id, filePath, perihal) => {
         setDeleteConfirmModal({ 
@@ -1668,29 +1786,146 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
     };
     
     return (
-        <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-            <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                <h3 className="text-xl font-bold text-gray-900">{title}</h3>
-                <ExportExcelButton data={arsipList} filename={`Daftar_Arsip_${listType}`} klasifikasiList={klasifikasiList} />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+            {/* Header Section */}
+            <div className="p-6 border-b border-gray-100">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+                    <div>
+                        <h3 className="text-2xl font-bold text-gray-900 mb-1">{title}</h3>
+                        <p className="text-sm text-gray-500">
+                            Menampilkan {filteredAndSortedData.length} dari {arsipList?.length || 0} arsip
+                        </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <ExportExcelButton data={filteredAndSortedData} filename={`Daftar_Arsip_${listType}`} klasifikasiList={klasifikasiList} />
+                    </div>
+                </div>
+                
+                {/* Search and Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-4">
+                    {/* Search */}
+                    <div className="lg:col-span-2">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Cari perihal, nomor surat, tujuan..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                            />
+                        </div>
+                    </div>
+                    
+                    {/* Status Filter */}
+                    <div>
+                        <select
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        >
+                            <option value="semua">Semua Status</option>
+                            <option value="aktif">Aktif</option>
+                            <option value="inaktif">Inaktif</option>
+                        </select>
+                    </div>
+                    
+                    {/* Klasifikasi Filter */}
+                    <div>
+                        <select
+                            value={filterKlasifikasi}
+                            onChange={(e) => setFilterKlasifikasi(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        >
+                            <option value="semua">Semua Klasifikasi</option>
+                            {uniqueKlasifikasi.map(k => (
+                                <option key={k.kode} value={k.kode}>
+                                    {k.kode} - {k.deskripsi}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    
+                    {/* Sort By */}
+                    <div>
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
+                            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                        >
+                            <option value="tanggalSurat">Tanggal Surat</option>
+                            <option value="perihal">Perihal</option>
+                            <option value="nomorSurat">Nomor Surat</option>
+                            <option value="tanggalRetensi">Tanggal Retensi</option>
+                            <option value="status">Status</option>
+                        </select>
+                    </div>
+                    
+                    {/* Sort Order & View Mode */}
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                            className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center"
+                            title={`Urutkan ${sortOrder === 'asc' ? 'Menurun' : 'Menaik'}`}
+                        >
+                            {sortOrder === 'asc' ? '↑' : '↓'}
+                        </button>
+                        <button
+                            onClick={() => setViewMode(viewMode === 'table' ? 'grid' : 'table')}
+                            className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center"
+                            title={`Tampilan ${viewMode === 'table' ? 'Grid' : 'Tabel'}`}
+                        >
+                            {viewMode === 'table' ? '⊞' : '☰'}
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div className="overflow-x-auto">
-                {arsipList.length > 0 ? (
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-gray-50 text-gray-600">
-                            <tr>
-                                <th className="p-3">Lampiran</th>
-                                <th className="p-3">Perihal</th>
-                                <th className="p-3">Nomor Surat</th>
-                                <th className="p-3">Tujuan</th>
-                                <th className="p-3">Tanggal Surat</th>
-                                <th className="p-3">Tanggal Retensi</th>
-                                <th className="p-3">Status</th>
-                                <th className="p-3">Klasifikasi</th>
-                                <th className="p-3 text-center">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {arsipList.map(arsip => {
+            {/* Content Section */}
+            <div className="p-6">
+                {isDataLoading ? (
+                    <div className="space-y-4">
+                        <ArsipSkeleton />
+                        <ArsipSkeleton />
+                        <ArsipSkeleton />
+                    </div>
+                ) : filteredAndSortedData.length === 0 ? (
+                    <div className="text-center py-16">
+                        <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                            <Archive className="w-12 h-12 text-gray-400" />
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">Tidak ada arsip ditemukan</h3>
+                        <p className="text-gray-500 mb-4">Coba ubah filter atau kata kunci pencarian Anda</p>
+                        <button
+                            onClick={() => {
+                                setSearchTerm('');
+                                setFilterStatus('semua');
+                                setFilterKlasifikasi('semua');
+                            }}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                        >
+                            Reset Filter
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        {viewMode === 'table' ? (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead>
+                                        <tr className="border-b border-gray-200">
+                                            <th className="text-left py-3 px-4 font-medium text-gray-700">Lampiran</th>
+                                            <th className="text-left py-3 px-4 font-medium text-gray-700">Perihal</th>
+                                            <th className="text-left py-3 px-4 font-medium text-gray-700">Nomor Surat</th>
+                                            <th className="text-left py-3 px-4 font-medium text-gray-700">Tujuan</th>
+                                            <th className="text-left py-3 px-4 font-medium text-gray-700">Tanggal Surat</th>
+                                            <th className="text-left py-3 px-4 font-medium text-gray-700">Tanggal Retensi</th>
+                                            <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
+                                            <th className="text-left py-3 px-4 font-medium text-gray-700">Klasifikasi</th>
+                                            <th className="text-center py-3 px-4 font-medium text-gray-700">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {paginatedData.map(arsip => {
                                 const today = new Date();
                                 const retensiDate = new Date(arsip.tanggalRetensi);
                                 let status = 'Aktif';
@@ -1701,9 +1936,9 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                 }
                                 const fileUrl = arsip.filePath ? `${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}` : null;
 
-                                return (
-                                <tr key={arsip.id} className="border-b border-gray-200 hover:bg-gray-50">
-                                    <td className="p-3 text-center">
+                                            return (
+                                                <tr key={arsip.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150">
+                                                    <td className="py-4 px-4 text-center">
                                         {fileUrl ? (
                                             <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-primary-500 hover:text-primary-700" title={arsip.fileName}>
                                                 <Paperclip size={18} />
@@ -1711,50 +1946,57 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                         ) : (
                                             <span className="text-gray-400">-</span>
                                         )}
-                                    </td>
-                                    <td className="p-3 font-medium text-gray-900">
-                                        <div className="flex items-center gap-2">
-                                            <span>{arsip.perihal}</span>
-                                            {(arsip.googleDriveLink || arsip.filePath) && (
-                                                <div className="flex items-center gap-1">
-                                                    {arsip.googleDriveLink && (
-                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="Dokumen tersedia di Google Drive">
-                                                            <Eye size={12} className="mr-1" />
-                                                            GDrive
+                                                    </td>
+                                                    <td className="py-4 px-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-medium text-gray-900">{arsip.perihal}</span>
+                                                            {(arsip.googleDriveLink || arsip.filePath) && (
+                                                                <div className="flex items-center gap-1">
+                                                                    {arsip.googleDriveLink && (
+                                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="Dokumen tersedia di Google Drive">
+                                                                            <Eye size={12} className="mr-1" />
+                                                                            GDrive
+                                                                        </span>
+                                                                    )}
+                                                                    {arsip.filePath && !arsip.googleDriveLink && (
+                                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800" title="File tersedia di server">
+                                                                            <FileText size={12} className="mr-1" />
+                                                                            File
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-4 px-4 text-gray-600">{arsip.nomorSurat}</td>
+                                                    <td className="py-4 px-4 text-gray-600">{arsip.tujuanSurat}</td>
+                                                    <td className="py-4 px-4 text-gray-600">{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</td>
+                                                    <td className="py-4 px-4 text-gray-600">{retensiDate ? retensiDate.toLocaleDateString('id-ID') : 'N/A'}</td>
+                                                    <td className={`py-4 px-4 font-medium ${statusColor}`}>
+                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                                            status === 'Aktif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                            {status === 'Aktif' ? <CheckCircle size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
+                                                            {status}
                                                         </span>
-                                                    )}
-                                                    {arsip.filePath && !arsip.googleDriveLink && (
-                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800" title="File tersedia di server">
-                                                            <FileText size={12} className="mr-1" />
-                                                            File
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td className="p-3 text-gray-600">{arsip.nomorSurat}</td>
-                                    <td className="p-3 text-gray-600">{arsip.tujuanSurat}</td>
-                                    <td className="p-3 text-gray-600">{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</td>
-                                    <td className="p-3 text-gray-600">{retensiDate ? retensiDate.toLocaleDateString('id-ID') : 'N/A'}</td>
-                                    <td className={`p-3 font-medium ${statusColor}`}>{status}</td>
-                                    <td className="p-3 relative">
-                                         <div className="relative klasifikasi-dropdown">
-                                            <button 
-                                                onClick={() => toggleKlasifikasiDropdown(arsip.id)}
-                                                className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors duration-200 w-full text-left"
-                                                title="Klik untuk melihat hierarki klasifikasi"
-                                            >
-                                                <span className={getKlasifikasiStyle(arsip.kodeKlasifikasi)}>
-                                                    {formatKlasifikasiDisplay(arsip.kodeKlasifikasi)}
-                                                </span>
-                                                <ChevronRight 
-                                                    size={14} 
-                                                    className={`transition-transform duration-200 ${
-                                                        expandedKlasifikasi[arsip.id] ? 'rotate-90' : ''
-                                                    }`}
-                                                />
-                                            </button>
+                                                    </td>
+                                                    <td className="py-4 px-4 relative">
+                                                        <div className="relative klasifikasi-dropdown">
+                                                            <button 
+                                                                onClick={() => toggleKlasifikasiDropdown(arsip.id)}
+                                                                className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 transition-colors duration-200 w-full text-left"
+                                                                title="Klik untuk melihat hierarki klasifikasi"
+                                                            >
+                                                                <span className={getKlasifikasiStyle(arsip.kodeKlasifikasi)}>
+                                                                    {formatKlasifikasiDisplay(arsip.kodeKlasifikasi)}
+                                                                </span>
+                                                                <ChevronRight 
+                                                                    size={14} 
+                                                                    className={`transition-transform duration-200 ${
+                                                                        expandedKlasifikasi[arsip.id] ? 'rotate-90' : ''
+                                                                    }`}
+                                                                />
+                                                            </button>
                                             
                                             {expandedKlasifikasi[arsip.id] && (
                                                 <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-80 max-w-96">
@@ -1792,62 +2034,211 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                             )}
                                         </div>
                                     </td>
-                                    <td className="p-3 text-center">
-                                        <div className="flex justify-center gap-2">
-                                            {/* Google Drive Actions */}
-                                            {arsip.googleDriveLink && (
-                                                <>
-                                                    <button 
-                                                        onClick={() => window.open(arsip.googleDriveLink, '_blank')} 
-                                                        className="text-blue-500 hover:text-blue-700" 
-                                                        title="Lihat Dokumen di Google Drive"
-                                                    >
-                                                        <Eye size={16} />
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => {
-                                                            const downloadLink = arsip.googleDriveLink.replace('/view', '/export?format=pdf');
-                                                            window.open(downloadLink, '_blank');
-                                                        }} 
-                                                        className="text-green-500 hover:text-green-700" 
-                                                        title="Download Dokumen"
+                                                    <td className="py-4 px-4 text-center">
+                                                        <div className="flex justify-center gap-2">
+                                                            {/* Google Drive Actions */}
+                                                            {arsip.googleDriveLink && (
+                                                                <>
+                                                                    <button 
+                                                                        onClick={() => window.open(arsip.googleDriveLink, '_blank')} 
+                                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200" 
+                                                                        title="Lihat Dokumen di Google Drive"
+                                                                    >
+                                                                        <Eye size={16} />
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => {
+                                                                            try {
+                                                                                const fileId = parseGoogleDriveLink(arsip.googleDriveLink)?.fileId;
+                                                                                if (fileId) {
+                                                                                    const downloadLink = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                                                                                    window.open(downloadLink, '_blank');
+                                                                                } else {
+                                                                                    // Fallback untuk format link lama
+                                                                                    const downloadLink = arsip.googleDriveLink.replace('/view', '/export?format=pdf');
+                                                                                    window.open(downloadLink, '_blank');
+                                                                                }
+                                                                            } catch (error) {
+                                                                                console.error('Error downloading file:', error);
+                                                                                toast.error('Gagal mengunduh file. Silakan coba buka file di Google Drive.');
+                                                                            }
+                                                                        }} 
+                                                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors duration-200" 
+                                                                        title="Download Dokumen"
                                                     >
                                                         <Download size={16} />
                                                     </button>
                                                 </>
                                             )}
-                                            {/* Traditional File Actions */}
-                                            {arsip.filePath && !arsip.googleDriveLink && (
-                                                <button 
-                                                    onClick={() => window.open(`${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`, '_blank')} 
-                                                    className="text-blue-500 hover:text-blue-700" 
-                                                    title="Lihat File"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-                                            )}
-                                            <button onClick={() => setEditingArsip(arsip)} className="text-primary-500 hover:text-primary-700" title="Edit">
-                                                <Edit size={16} />
-                                            </button>
-                                            <button onClick={() => handleDelete(arsip.id, arsip.filePath, arsip.perihal)} className="text-red-500 hover:text-red-700" title="Hapus">
-                                                <Trash2 size={16} />
-                                            </button>
+                                                            {/* Traditional File Actions */}
+                                                            {arsip.filePath && !arsip.googleDriveLink && (
+                                                                <button 
+                                                                    onClick={() => window.open(`${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`, '_blank')} 
+                                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200" 
+                                                                    title="Lihat File"
+                                                                >
+                                                                    <Eye size={16} />
+                                                                </button>
+                                                            )}
+                                                            <button onClick={() => setEditingArsip(arsip)} className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors duration-200" title="Edit">
+                                                                <Edit size={16} />
+                                                            </button>
+                                                            <button onClick={() => handleDelete(arsip.id, arsip.filePath, arsip.perihal)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200" title="Hapus">
+                                                                <Trash2 size={16} />
+                                                            </button>
                                         </div>
                                     </td>
                                 </tr>
                             )})}
                         </tbody>
                     </table>
-                ) : isDataLoading ? (
-                    <div className="space-y-4">
-                        <ArsipSkeleton />
-                                <ArsipSkeleton />
-                                <ArsipSkeleton />
-                    </div>
-                ) : (
-                    <div className="text-center py-12 text-gray-500">
-                        Tidak ada data arsip yang cocok dengan filter Anda.
-                    </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {paginatedData.map(arsip => {
+                                    const isActive = new Date(arsip.tanggalRetensi) > new Date();
+                                    return (
+                                        <div key={arsip.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex items-center gap-2">
+                                                    {arsip.googleDriveLink && (
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                            GDrive
+                                                        </span>
+                                                    )}
+                                                    {arsip.filePath && !arsip.googleDriveLink && (
+                                                        <Paperclip size={14} className="text-gray-500" />
+                                                    )}
+                                                </div>
+                                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                                    isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                                }`}>
+                                                    {isActive ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+                                                    {isActive ? 'Aktif' : 'Inaktif'}
+                                                </span>
+                                            </div>
+                                            
+                                            <h4 className="font-medium text-gray-900 mb-2 line-clamp-2">{arsip.perihal}</h4>
+                                            <p className="text-sm text-gray-600 mb-1">No: {arsip.nomorSurat}</p>
+                                            <p className="text-sm text-gray-600 mb-2">Tujuan: {arsip.tujuanSurat}</p>
+                                            
+                                            <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                                                <span>{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</span>
+                                                <span className={getKlasifikasiStyle(arsip.kodeKlasifikasi)}>
+                                                    {formatKlasifikasiDisplay(arsip.kodeKlasifikasi)}
+                                                </span>
+                                            </div>
+                                            
+                                            <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                                                <div className="flex items-center gap-1">
+                                                    {arsip.googleDriveLink && (
+                                                        <>
+                                                            <button 
+                                                                onClick={() => window.open(arsip.googleDriveLink, '_blank')} 
+                                                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors duration-200" 
+                                                                title="Lihat di Google Drive"
+                                                            >
+                                                                <Eye size={14} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    try {
+                                                                        const fileId = parseGoogleDriveLink(arsip.googleDriveLink)?.fileId;
+                                                                        if (fileId) {
+                                                                            const downloadLink = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                                                                            window.open(downloadLink, '_blank');
+                                                                        } else {
+                                                                            const downloadLink = arsip.googleDriveLink.replace('/view', '/export?format=pdf');
+                                                                            window.open(downloadLink, '_blank');
+                                                                        }
+                                                                    } catch (error) {
+                                                                        console.error('Error downloading file:', error);
+                                                                        toast.error('Gagal mengunduh file. Silakan coba buka file di Google Drive.');
+                                                                    }
+                                                                }} 
+                                                                className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors duration-200" 
+                                                                title="Download"
+                                                            >
+                                                                <Download size={14} />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    {arsip.filePath && !arsip.googleDriveLink && (
+                                                        <button 
+                                                            onClick={() => window.open(`${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`, '_blank')} 
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors duration-200" 
+                                                            title="Lihat File"
+                                                        >
+                                                            <Eye size={14} />
+                                                        </button>
+                                                    )}
+                                                    <button onClick={() => setEditingArsip(arsip)} className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded transition-colors duration-200" title="Edit">
+                                                        <Edit size={14} />
+                                                    </button>
+                                                    <button onClick={() => handleDelete(arsip.id, arsip.filePath, arsip.perihal)} className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors duration-200" title="Hapus">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-200">
+                                <div className="text-sm text-gray-500">
+                                    Menampilkan {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredAndSortedData.length)} dari {filteredAndSortedData.length} arsip
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage === 1}
+                                        className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                                    >
+                                        Sebelumnya
+                                    </button>
+                                    
+                                    <div className="flex items-center gap-1">
+                                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                            let pageNum;
+                                            if (totalPages <= 5) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage <= 3) {
+                                                pageNum = i + 1;
+                                            } else if (currentPage >= totalPages - 2) {
+                                                pageNum = totalPages - 4 + i;
+                                            } else {
+                                                pageNum = currentPage - 2 + i;
+                                            }
+                                            
+                                            return (
+                                                <button
+                                                    key={pageNum}
+                                                    onClick={() => setCurrentPage(pageNum)}
+                                                    className={`px-3 py-2 text-sm rounded-lg transition-colors duration-200 ${
+                                                        currentPage === pageNum
+                                                            ? 'bg-blue-600 text-white'
+                                                            : 'border border-gray-200 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    {pageNum}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    
+                                    <button
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage === totalPages}
+                                        className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+                                    >
+                                        Selanjutnya
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                 )}
             </div>
         </div>
@@ -2042,9 +2433,44 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
     const isDataLoading = !stats || stats.total === undefined;
 
     const statCards = [
-        { icon: Archive, title: "Total Arsip", value: stats?.total || 0, color: "blue", trend: "+12%" },
-        { icon: CheckCircle, title: "Arsip Aktif", value: stats?.active || 0, color: "green", trend: "+8%" },
-        { icon: AlertCircle, title: "Arsip Inaktif", value: stats?.inactive || 0, color: "red", trend: "-3%" }
+        { 
+            icon: Archive, 
+            title: "Total Arsip", 
+            value: stats?.total || 0, 
+            color: "blue", 
+            trend: "+12%",
+            onClick: () => navigate('semua')
+        },
+        { 
+            icon: CheckCircle, 
+            title: "Arsip Aktif", 
+            value: stats?.active || 0, 
+            color: "green", 
+            trend: "+8%",
+            onClick: () => {
+                navigate('semua');
+                // Set filter untuk arsip aktif setelah navigasi
+                setTimeout(() => {
+                    const activeTab = document.querySelector('[data-tab="aktif"]');
+                    if (activeTab) activeTab.click();
+                }, 100);
+            }
+        },
+        { 
+            icon: AlertCircle, 
+            title: "Arsip Inaktif", 
+            value: stats?.inactive || 0, 
+            color: "red", 
+            trend: "-3%",
+            onClick: () => {
+                navigate('semua');
+                // Set filter untuk arsip inaktif setelah navigasi
+                setTimeout(() => {
+                    const inactiveTab = document.querySelector('[data-tab="inaktif"]');
+                    if (inactiveTab) inactiveTab.click();
+                }, 100);
+            }
+        }
     ];
 
     return (
@@ -2177,6 +2603,7 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
                     <div className="border-b border-gray-200">
                         <nav className="flex space-x-8 px-6" aria-label="Tabs">
                             <button 
+                                data-tab="aktif"
                                 onClick={() => setActiveTab('aktif')} 
                                 className={`${
                                     activeTab === 'aktif' 
@@ -2193,6 +2620,7 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
                                 </div>
                             </button>
                             <button 
+                                data-tab="inaktif"
                                 onClick={() => setActiveTab('inaktif')} 
                                 className={`${
                                     activeTab === 'inaktif' 

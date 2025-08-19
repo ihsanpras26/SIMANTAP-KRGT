@@ -45,34 +45,24 @@ const Sidebar = ({
   const items = Array.isArray(navigationItems) && navigationItems.length > 0 ? navigationItems : sidebarItems;
 
   return (
-    <motion.div
-      initial={false}
-      animate={{ width: collapsedState ? 80 : 280 }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
-      className="fixed left-0 top-0 h-full overflow-y-auto bg-white border-r border-gray-200/60 shadow-lg z-40"
+    <div
+      className="fixed left-0 top-0 h-full overflow-y-auto bg-white border-r border-gray-200/60 shadow-lg z-40 transition-all duration-300 ease-out"
+      style={{ width: collapsedState ? '80px' : '280px' }}
     >
       {/* Header */}
       <div className="relative p-6 border-b border-gray-200/60">
         <div className="flex items-center justify-between">
-          <AnimatePresence>
-            {!collapsedState && (
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-3"
-              >
-                <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-lg">
-                  <Archive className="text-white" size={18} />
-                </div>
-                <div>
-                  <h1 className="text-gray-900 font-bold text-lg">SIMANTEP</h1>
-                  <p className="text-gray-500 text-xs">Sistem Arsip Digital</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {!collapsedState && (
+            <div className="flex items-center gap-3 transition-opacity duration-300">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-primary-600 rounded-lg flex items-center justify-center shadow-lg">
+                <Archive className="text-white" size={18} />
+              </div>
+              <div>
+                <h1 className="text-gray-900 font-bold text-lg">SIMANTEP</h1>
+                <p className="text-gray-500 text-xs">Sistem Arsip Digital</p>
+              </div>
+            </div>
+          )}
 
           <Button
             variant="ghost"
@@ -102,12 +92,7 @@ const Sidebar = ({
           };
 
           return (
-            <motion.div
-              key={item.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
+            <div key={item.id}>
               <Button
                 variant="ghost"
                 onClick={handleClick}
@@ -118,50 +103,31 @@ const Sidebar = ({
                 )}
               >
                 {Icon && <Icon size={20} className={cn(isActive ? 'text-primary-600' : 'text-gray-500')} />}
-                <AnimatePresence>
-                  {!collapsedState && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="font-medium"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
+                {!collapsedState && (
+                  <span className="font-medium transition-opacity duration-300">
+                    {item.label}
+                  </span>
+                )}
 
                 {isActive && (
-                  <motion.div
-                    layoutId="activeIndicator"
-                    className="absolute right-0 w-1 h-8 bg-primary-500 rounded-l-full"
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                  />
+                  <div className="absolute right-0 w-1 h-8 bg-primary-500 rounded-l-full transition-all duration-200" />
                 )}
               </Button>
-            </motion.div>
+            </div>
           );
         })}
       </nav>
 
       {/* Footer */}
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200/60 bg-white">
-        <AnimatePresence>
-          {!collapsedState && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="text-center text-gray-500 text-xs"
-            >
-              <p>© {new Date().getFullYear()} SIMANTEP</p>
-              <p>Versi 1.0.0</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {!collapsedState && (
+          <div className="text-center text-gray-500 text-xs transition-opacity duration-300">
+            <p>© {new Date().getFullYear()} SIMANTEP</p>
+            <p>Versi 1.0.0</p>
+          </div>
+        )}
       </div>
-    </motion.div>
+    </div>
   );
 };
 
