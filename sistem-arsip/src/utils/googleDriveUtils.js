@@ -162,14 +162,15 @@ export const testGoogleDriveUtils = () => {
     '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms'
   ];
 
-  console.log('Testing Google Drive Utils:');
-  testLinks.forEach((link, index) => {
+  // Testing function for development - logs removed for production
+  return testLinks.map((link, index) => {
     const result = parseGoogleDriveLink(link);
-    console.log(`Test ${index + 1}:`, {
+    return {
+      test: index + 1,
       input: link,
       fileId: result.fileId,
       isValid: result.isValid,
       viewLink: result.links.viewLink
-    });
+    };
   });
 };

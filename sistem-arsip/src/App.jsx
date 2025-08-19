@@ -149,14 +149,14 @@ export default function App() {
             const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 0);
             
             // Search in arsip
-            const arsipResults = arsipList.filter(arsip => {
-                const searchableText = `${arsip.perihal} ${arsip.nomorSurat} ${arsip.tujuanSurat} ${arsip.kodeKlasifikasi}`.toLowerCase();
+            const arsipResults = (arsipList || []).filter(arsip => {
+                const searchableText = `${arsip.perihal || ''} ${arsip.nomorSurat || ''} ${arsip.tujuanSurat || ''} ${arsip.kodeKlasifikasi || ''}`.toLowerCase();
                 return searchTerms.some(term => searchableText.includes(term));
             }).map(arsip => ({ ...arsip, type: 'arsip' }));
 
             // Search in klasifikasi (use deskripsi field)
-            const klasifikasiResults = klasifikasiList.filter(klasifikasi => {
-                const searchableText = `${klasifikasi.kode} ${klasifikasi.deskripsi}`.toLowerCase();
+            const klasifikasiResults = (klasifikasiList || []).filter(klasifikasi => {
+                const searchableText = `${klasifikasi.kode || ''} ${klasifikasi.deskripsi || ''}`.toLowerCase();
                 return searchTerms.some(term => searchableText.includes(term));
             }).map(klasifikasi => ({ ...klasifikasi, type: 'klasifikasi' }));
 
@@ -197,20 +197,28 @@ export default function App() {
     useEffect(() => {
         if (!supabase) return;
         // Sinkronisasi session
-        supabase.auth.getSession().then(({ data }) => setSession(data.session));
+        supabase.auth.getSession().then(({ data }) => setSession(data?.session || null));
         const { data: authListener } = supabase.auth.onAuthStateChange((_event, currentSession) => setSession(currentSession));
         // Fungsi untuk mengambil data awal
         const fetchData = async () => {
             setStoreLoading(true);
             // Ambil data arsip
             const { data: arsipData, error: arsipError } = await supabase.from('arsip').select('*').order('tanggalSurat', { ascending: false });
-            if (arsipError) console.error("Error fetching arsip:", arsipError);
-            else setArsipList(arsipData || []);
+            if (arsipError) {
+                console.error("Error fetching arsip:", arsipError);
+                showNotification(`Gagal memuat data arsip: ${arsipError.message || 'Terjadi kesalahan'}`, 'error');
+            } else {
+                setArsipList(arsipData || []);
+            }
 
             // Ambil data klasifikasi
             const { data: klasifikasiData, error: klasifikasiError } = await supabase.from('klasifikasi').select('*').order('kode', { ascending: true });
-            if (klasifikasiError) console.error("Error fetching klasifikasi:", klasifikasiError);
-            else setKlasifikasiList(klasifikasiData || []);
+            if (klasifikasiError) {
+                console.error("Error fetching klasifikasi:", klasifikasiError);
+                showNotification(`Gagal memuat data klasifikasi: ${klasifikasiError.message || 'Terjadi kesalahan'}`, 'error');
+            } else {
+                setKlasifikasiList(klasifikasiData || []);
+            }
             
             setStoreLoading(false);
         };
@@ -221,8 +229,7 @@ export default function App() {
         const arsipChannel = supabase.channel('public:arsip')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'arsip' }, 
                 (payload) => {
-                    console.log('Perubahan arsip diterima!', payload);
-                    
+                    // Handle real-time changes for arsip table
                     if (payload.eventType === 'INSERT') {
                         setArsipList(prev => [payload.new, ...prev]);
                         showNotification('Data arsip baru ditambahkan!', 'success');
@@ -243,8 +250,7 @@ export default function App() {
         const klasifikasiChannel = supabase.channel('public:klasifikasi')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'klasifikasi' }, 
                 (payload) => {
-                    console.log('Perubahan klasifikasi diterima!', payload);
-                    
+                    // Handle real-time changes for klasifikasi table
                     if (payload.eventType === 'INSERT') {
                         setKlasifikasiList(prev => [...prev, payload.new].sort((a, b) => a.kode.localeCompare(b.kode, undefined, { numeric: true })));
                         // Tidak tampilkan notifikasi untuk INSERT karena sudah ada di form
@@ -655,11 +661,11 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             // Process existing Google Drive link to extract info
             if (arsipToEdit.googleDriveLink && isValidGoogleDriveLink(arsipToEdit.googleDriveLink)) {
                 const driveInfo = parseGoogleDriveLink(arsipToEdit.googleDriveLink);
-                if (driveInfo.success) {
+                if (driveInfo && driveInfo.success) {
                     setGoogleDriveInfo({
-                        fileId: driveInfo.fileId,
-                        viewLink: driveInfo.links.viewLink,
-                        downloadLink: driveInfo.links.downloadLink
+                        fileId: driveInfo.fileId || '',
+                        viewLink: driveInfo.links?.viewLink || '',
+                        downloadLink: driveInfo.links?.downloadLink || ''
                     });
                 }
             }
@@ -677,16 +683,16 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
 
     // Fungsi untuk mengidentifikasi kode klasifikasi dari nomor surat
     const identifyKlasifikasiFromNomor = (nomorSurat) => {
-        if (!nomorSurat) return null;
+        if (!nomorSurat || !klasifikasiList || klasifikasiList.length === 0) return null;
         
         // Cari pola kode klasifikasi dalam nomor surat (contoh: 001.1, 002.3.1, dll)
         const kodePattern = /\b(\d{3}(?:\.\d+)*)/g;
         const matches = nomorSurat.match(kodePattern);
         
-        if (matches) {
+        if (matches && matches.length > 0) {
             // Cari kode yang paling cocok dengan klasifikasi yang ada
             for (const match of matches) {
-                const foundKlasifikasi = klasifikasiList.find(k => k.kode === match);
+                const foundKlasifikasi = klasifikasiList.find(k => k && k.kode === match);
                 if (foundKlasifikasi) {
                     return match;
                 }
@@ -695,7 +701,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 const parts = match.split('.');
                 for (let i = parts.length - 1; i > 0; i--) {
                     const parentKode = parts.slice(0, i).join('.');
-                    const parentKlasifikasi = klasifikasiList.find(k => k.kode === parentKode);
+                    const parentKlasifikasi = klasifikasiList.find(k => k && k.kode === parentKode);
                     if (parentKlasifikasi) {
                         return parentKode;
                     }
@@ -719,31 +725,42 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
         }
         
         // Auto-ekstrak Google Drive file ID dan view link
-        if (name === 'googleDriveLink' && value.trim()) {
-            const driveInfo = parseGoogleDriveLink(value.trim());
-            if (driveInfo.isValid) {
-                setGoogleDriveInfo({
-                    fileId: driveInfo.fileId,
-                    viewLink: driveInfo.links.viewLink,
-                    downloadLink: driveInfo.links.downloadLink
-                });
-                
-                // Normalisasi link ke format view yang konsisten
-                if (value.trim() !== driveInfo.links.viewLink) {
-                    setFormData(prev => ({ ...prev, googleDriveLink: driveInfo.links.viewLink }));
-                    showNotification('Link Google Drive dinormalisasi ke format standar', 'info');
+        if (name === 'googleDriveLink') {
+            const trimmedValue = (value || '').trim();
+            if (trimmedValue) {
+                const driveInfo = parseGoogleDriveLink(trimmedValue);
+                if (driveInfo && driveInfo.success) {
+                    setGoogleDriveInfo({
+                        fileId: driveInfo.fileId || '',
+                        viewLink: driveInfo.links?.viewLink || '',
+                        downloadLink: driveInfo.links?.downloadLink || ''
+                    });
+                    
+                    // Normalisasi link ke format view yang konsisten
+                    if (driveInfo.links?.viewLink && trimmedValue !== driveInfo.links.viewLink) {
+                        setFormData(prev => ({ ...prev, googleDriveLink: driveInfo.links.viewLink }));
+                        showNotification('Link Google Drive dinormalisasi ke format standar', 'info');
+                    }
+                } else {
+                    setGoogleDriveInfo({ fileId: '', viewLink: '', downloadLink: '' });
                 }
             } else {
+                // Reset Google Drive info jika link dikosongkan
                 setGoogleDriveInfo({ fileId: '', viewLink: '', downloadLink: '' });
+                // Clear validation errors for Google Drive link
+                setValidationErrors(prev => {
+                    const newErrors = { ...prev };
+                    delete newErrors.googleDriveLink;
+                    return newErrors;
+                });
             }
-        } else if (name === 'googleDriveLink' && !value.trim()) {
-            // Reset Google Drive info jika link dikosongkan
-            setGoogleDriveInfo({ fileId: '', viewLink: '', downloadLink: '' });
         }
     };
 
     const handleGoogleDriveFileUploaded = (fileData) => {
-        setGoogleDriveFile(fileData);
+        if (fileData && typeof fileData === 'object') {
+            setGoogleDriveFile(fileData);
+        }
     };
     
     const handleGoogleDriveFileRemoved = () => {
@@ -754,22 +771,24 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
         const errors = {};
         
         // Hanya tanggal surat dan perihal yang wajib diisi
-        if (!formData.tanggalSurat) errors.tanggalSurat = 'Tanggal surat wajib diisi';
-        if (!formData.perihal.trim()) errors.perihal = 'Perihal / isi surat wajib diisi';
+        if (!formData?.tanggalSurat) errors.tanggalSurat = 'Tanggal surat wajib diisi';
+        if (!formData?.perihal || !(formData.perihal || '').trim()) errors.perihal = 'Perihal / isi surat wajib diisi';
         
         // Validasi kode klasifikasi jika diisi (baik manual maupun dropdown)
-        const kodeToValidate = useManualKode ? manualKodeInput : formData.kodeKlasifikasi;
+        const kodeToValidate = useManualKode ? (manualKodeInput || '') : (formData?.kodeKlasifikasi || '');
         if (kodeToValidate && useManualKode) {
             // Validasi format kode manual (harus berupa angka dengan titik)
             const kodePattern = /^\d{3}(\.\d+)*$/;
-            if (!kodePattern.test(kodeToValidate)) {
+            if (!kodePattern.test(kodeToValidate.trim())) {
                 errors.kodeKlasifikasi = 'Format kode klasifikasi tidak valid (contoh: 001.1 atau 002.3.1)';
             }
         }
         
         // Validasi Google Drive link jika diisi
-        if (formData.googleDriveLink && formData.googleDriveLink.trim()) {
-            if (!isValidGoogleDriveLink(formData.googleDriveLink.trim())) {
+        const googleDriveLink = formData?.googleDriveLink || '';
+        if (googleDriveLink.trim()) {
+            const trimmedLink = googleDriveLink.trim();
+            if (!isValidGoogleDriveLink(trimmedLink)) {
                 errors.googleDriveLink = 'Link Google Drive tidak valid. Pastikan menggunakan link sharing yang benar.';
             }
         }
@@ -831,26 +850,27 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             }
         }
         const tglSurat = new Date(formData.tanggalSurat);
-        if (isNaN(tglSurat)) {
+        if (isNaN(tglSurat.getTime())) {
             showNotification('Tanggal surat tidak valid.', 'error');
             setIsLoading(false);
             return;
         }
         const retensiDate = new Date(new Date(tglSurat).setFullYear(tglSurat.getFullYear() + Number(retensiAktif)));
 
+        // Ensure all data is properly sanitized and validated
         const dataToSave = { 
-            nomorSurat: formData.nomorSurat || null,
+            nomorSurat: formData.nomorSurat?.trim() || null,
             tanggalSurat: tglSurat.toISOString(),
-            pengirim: formData.pengirim || null,
-            tujuanSurat: formData.tujuanSurat || null,
-            perihal: formData.perihal,
+            pengirim: formData.pengirim?.trim() || null,
+            tujuanSurat: formData.tujuanSurat?.trim() || null,
+            perihal: formData.perihal?.trim() || '',
             kodeKlasifikasi: finalKodeKlasifikasi || null,
             tanggalRetensi: retensiDate.toISOString(),
             filePath: fileData.filePath,
             fileName: fileData.fileName,
-            googleDriveFileId: googleDriveInfo.fileId || fileData.googleDriveFileId,
-            googleDriveViewLink: googleDriveInfo.viewLink || fileData.googleDriveViewLink,
-            googleDriveLink: formData.googleDriveLink || null,
+            googleDriveFileId: (googleDriveInfo?.fileId || fileData.googleDriveFileId) || null,
+            googleDriveViewLink: (googleDriveInfo?.viewLink || fileData.googleDriveViewLink) || null,
+            googleDriveLink: formData.googleDriveLink?.trim() || null,
         };
 
         try {
@@ -883,7 +903,8 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             onFinish();
         } catch (error) {
             console.error("Error saving document:", error);
-            showNotification(`Gagal menyimpan data: ${error.message}`, 'error');
+            const errorMessage = error?.message || 'Terjadi kesalahan yang tidak diketahui';
+            showNotification(`Gagal menyimpan data: ${errorMessage}`, 'error');
         } finally {
             setIsLoading(false);
         }
@@ -1015,7 +1036,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                         <div className="md:col-span-2">
                             <label className="block text-sm font-semibold text-gray-800 mb-4 flex items-center gap-1">
                                 Kode Klasifikasi
-                                <span className="text-red-500 text-base">*</span>
+                                <span className="text-gray-500 text-xs">(Opsional)</span>
                             </label>
                             
                             {/* Toggle Switch untuk memilih mode input */}
@@ -1153,7 +1174,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                     })}
                                     </select>
                                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                                        <span className="text-primary-500 text-xs font-medium bg-primary-50 px-2 py-1 rounded-full">Wajib</span>
+                                        <span className="text-primary-500 text-xs font-medium bg-primary-50 px-2 py-1 rounded-full">Opsional</span>
                                     </div>
                                 </div>
                             )}
@@ -1779,7 +1800,8 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
 
                 } catch (error) {
                     console.error("Error deleting document or file:", error);
-                    alert("Gagal menghapus arsip.");
+                    // Use toast notification instead of alert for consistency
+                    toast.error(`Gagal menghapus arsip: ${error.message || 'Terjadi kesalahan'}`);
                 }
             }
         });
@@ -2277,10 +2299,10 @@ const AdvancedSearchView = ({ arsipList, ...props }) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        return arsipList.filter(arsip => {
+        return (arsipList || []).filter(arsip => {
             if (filters.keyword) {
                 const keyword = filters.keyword.toLowerCase();
-                const searchable = `${arsip.perihal} ${arsip.nomorSurat} ${arsip.pengirim} ${arsip.tujuanSurat}`.toLowerCase();
+                const searchable = `${arsip.perihal || ''} ${arsip.nomorSurat || ''} ${arsip.pengirim || ''} ${arsip.tujuanSurat || ''}`.toLowerCase();
                 if (!searchable.includes(keyword)) return false;
             }
             if (filters.status !== 'semua') {
@@ -2334,7 +2356,7 @@ const AdvancedSearchView = ({ arsipList, ...props }) => {
                             }}
                         >
                            <option value="semua">Semua Klasifikasi</option>
-                           {props.klasifikasiList.sort((a,b) => a.kode.localeCompare(b.kode, undefined, {numeric: true})).map(k => {
+                           {(props.klasifikasiList || []).sort((a,b) => (a.kode || '').localeCompare(b.kode || '', undefined, {numeric: true})).map(k => {
                                const parts = k.kode.split('.');
                                const isMainCategory = parts.length === 1 && parts[0].length === 3;
                                const isSubCategory = parts.length === 2;
