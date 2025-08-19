@@ -594,6 +594,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
         tujuanSurat: '',
         perihal: '',
         kodeKlasifikasi: '',
+        googleDriveLink: '',
     });
     const [manualKodeInput, setManualKodeInput] = useState('');
     const [useManualKode, setUseManualKode] = useState(false);
@@ -615,6 +616,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 tujuanSurat: arsipToEdit.tujuanSurat || '',
                 perihal: arsipToEdit.perihal || '',
                 kodeKlasifikasi: arsipToEdit.kodeKlasifikasi || '',
+                googleDriveLink: arsipToEdit.googleDriveLink || '',
             });
             setExistingFile({ fileName: arsipToEdit.fileName, filePath: arsipToEdit.filePath });
             
@@ -748,6 +750,14 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             }
         }
         
+        // Validasi Google Drive link jika diisi
+        if (formData.googleDriveLink && formData.googleDriveLink.trim()) {
+            const gdriveLinkPattern = /^https:\/\/drive\.google\.com\/(file\/d\/[a-zA-Z0-9_-]+|open\?id=[a-zA-Z0-9_-]+)/;
+            if (!gdriveLinkPattern.test(formData.googleDriveLink.trim())) {
+                errors.googleDriveLink = 'Link Google Drive tidak valid. Pastikan menggunakan link sharing yang benar.';
+            }
+        }
+        
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -850,6 +860,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             googleDriveFileId: fileData.googleDriveFileId,
             googleDriveViewLink: fileData.googleDriveViewLink,
             googleDriveDownloadLink: fileData.googleDriveDownloadLink,
+            googleDriveLink: formData.googleDriveLink || null,
         };
 
         try {
@@ -1014,28 +1025,35 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-3">Kode Klasifikasi</label>
                             
-                            {/* Toggle untuk memilih mode input */}
-                            <div className="flex items-center gap-4 mb-3">
-                                <label className="flex items-center">
-                                    <input
-                                        type="radio"
-                                        name="inputMode"
-                                        checked={!useManualKode}
-                                        onChange={() => setUseManualKode(false)}
-                                        className="mr-2"
-                                    />
-                                    <span className="text-sm">Pilih dari daftar</span>
-                                </label>
-                                <label className="flex items-center">
-                                    <input
-                                        type="radio"
-                                        name="inputMode"
-                                        checked={useManualKode}
-                                        onChange={() => setUseManualKode(true)}
-                                        className="mr-2"
-                                    />
-                                    <span className="text-sm">Input manual</span>
-                                </label>
+                            {/* Toggle Switch untuk memilih mode input */}
+                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-4">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-sm font-medium text-gray-700">Mode Input:</span>
+                                    <div className="flex items-center gap-2">
+                                        <span className={`text-sm transition-colors ${!useManualKode ? 'text-primary-600 font-medium' : 'text-gray-500'}`}>
+                                            📋 Pilih dari Daftar
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setUseManualKode(!useManualKode)}
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                                                useManualKode ? 'bg-primary-600' : 'bg-gray-300'
+                                            }`}
+                                        >
+                                            <span
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                                    useManualKode ? 'translate-x-6' : 'translate-x-1'
+                                                }`}
+                                            />
+                                        </button>
+                                        <span className={`text-sm transition-colors ${useManualKode ? 'text-primary-600 font-medium' : 'text-gray-500'}`}>
+                                            ✏️ Input Manual
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                    {useManualKode ? 'Ketik kode klasifikasi secara manual' : 'Pilih dari daftar yang tersedia'}
+                                </div>
                             </div>
                             
                             {/* Input berdasarkan mode yang dipilih */}
@@ -1167,20 +1185,44 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 {/* Step 2: File Upload & Review */}
                 {currentStep === 2 && (
                     <div className="space-y-6 animate-fadeIn">
-                        {/* Google Drive Upload Integration */}
+                        {/* Google Drive Link Input */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-3">Lampiran Berkas</label>
-                            <GoogleDriveUpload
-                                onFileUploaded={handleGoogleDriveFileUploaded}
-                                onFileRemoved={handleGoogleDriveFileRemoved}
-                                existingFile={googleDriveFile}
-                                perihal={formData.perihal}
-                                tanggalSurat={formData.tanggalSurat}
-                                disabled={isLoading}
-                            />
-                            
-                            {/* Fallback: Traditional File Upload */}
-                            {!googleDriveFile && (
+                            <label className="block text-sm font-medium text-gray-700 mb-3">
+                                <span className="flex items-center gap-2">
+                                    📁 Link Dokumen Google Drive
+                                    <span className="text-xs text-gray-500">(Opsional)</span>
+                                </span>
+                            </label>
+                            <div className="space-y-3">
+                                <InputField
+                                    name="googleDriveLink"
+                                    value={formData.googleDriveLink || ''}
+                                    onChange={handleChange}
+                                    placeholder="https://drive.google.com/file/d/your-file-id/view"
+                                    className="w-full"
+                                />
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                    <div className="flex items-start gap-2">
+                                        <div className="text-blue-600 mt-0.5">💡</div>
+                                        <div className="text-sm text-blue-800">
+                                            <p className="font-medium mb-1">Cara mendapatkan link Google Drive:</p>
+                                            <ol className="list-decimal list-inside space-y-1 text-xs">
+                                                <li>Upload dokumen scan ke Google Drive Anda</li>
+                                                <li>Klik kanan pada file → "Dapatkan link"</li>
+                                                <li>Pastikan akses diatur ke "Siapa saja yang memiliki link"</li>
+                                                <li>Salin dan tempel link di sini</li>
+                                            </ol>
+                                        </div>
+                                    </div>
+                                </div>
+                                {validationErrors.googleDriveLink && (
+                                    <p className="text-red-500 text-sm animate-shake">{validationErrors.googleDriveLink}</p>
+                                )}
+                            </div>
+                        </div>
+                        
+                        {/* Fallback: Traditional File Upload */}
+                        {!googleDriveFile && (
                                 <div className="mt-4">
                                     <div className="text-center text-sm text-gray-500 mb-3">
                                         <span className="bg-gray-100 px-3 py-1 rounded-full">atau upload tradisional</span>
@@ -1240,9 +1282,9 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                     </div>
                                 </div>
                             )}
-                            
-                            {/* Existing File Display for Legacy Files */}
-                            {!file && !googleDriveFile && existingFile.fileName && (
+                        
+                        {/* Existing File Display for Legacy Files */}
+                        {!file && !googleDriveFile && existingFile.fileName && (
                                 <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                                     <div className="flex items-center gap-3">
                                         <FileText className="w-5 h-5 text-blue-600" />
@@ -1261,7 +1303,6 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                     </div>
                                 </div>
                             )}
-                        </div>
 
                         {/* Step 2 Navigation Buttons */}
                         <div className="flex justify-between pt-6">
@@ -1349,12 +1390,42 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                         </thead>
                         <tbody>
                             {klasifikasiList.map(k => {
-                                const isMainCategory = k.kode.length === 3;
-                                const indentationLevel = k.kode.split('.').length - 1;
+                                const parts = k.kode.split('.');
+                                const isMainCategory = parts.length === 1 && parts[0].length === 3;
+                                const isSubCategory = parts.length === 2;
+                                const isSubSubCategory = parts.length === 3;
+                                const indentationLevel = parts.length - 1;
+                                
+                                // Tentukan ikon berdasarkan level
+                                let icon = '';
+                                let bgColor = '';
+                                let textColor = '';
+                                
+                                if (isMainCategory) {
+                                    icon = '📁';
+                                    bgColor = 'bg-blue-50';
+                                    textColor = 'text-blue-800';
+                                } else if (isSubCategory) {
+                                    icon = '📂';
+                                    bgColor = 'bg-green-50';
+                                    textColor = 'text-green-700';
+                                } else if (isSubSubCategory) {
+                                    icon = '📄';
+                                    bgColor = 'bg-orange-50';
+                                    textColor = 'text-orange-600';
+                                } else {
+                                    icon = '📄';
+                                    bgColor = 'bg-gray-50';
+                                    textColor = 'text-gray-600';
+                                }
+                                
                                 return (
-                                    <tr key={k.id} className={`border-b border-gray-200 hover:bg-gray-50 ${isMainCategory ? 'bg-gray-100' : ''}`}>
-                                        <td className={`p-3 font-medium ${isMainCategory ? 'font-bold' : ''}`} style={{ paddingLeft: `${0.75 + indentationLevel * 1.5}rem` }}>{k.kode}</td>
-                                        <td className={`p-3 ${isMainCategory ? 'font-bold' : ''}`}>{k.deskripsi}</td>
+                                    <tr key={k.id} className={`border-b border-gray-200 hover:bg-gray-50 ${bgColor}`}>
+                                        <td className={`p-3 font-medium ${isMainCategory ? 'font-bold' : ''} ${textColor}`} style={{ paddingLeft: `${0.75 + indentationLevel * 1.5}rem` }}>
+                                            <span className="mr-2">{icon}</span>
+                                            {k.kode}
+                                        </td>
+                                        <td className={`p-3 ${isMainCategory ? 'font-bold' : ''} ${textColor}`}>{k.deskripsi}</td>
                                         <td className="p-3 text-center">{k.retensiAktif} thn</td>
                                         <td className="p-3 text-center">{k.retensiInaktif} thn</td>
                                         <td className="p-3 text-center">
@@ -1606,7 +1677,27 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                             <span className="text-gray-400">-</span>
                                         )}
                                     </td>
-                                    <td className="p-3 font-medium text-gray-900">{arsip.perihal}</td>
+                                    <td className="p-3 font-medium text-gray-900">
+                                        <div className="flex items-center gap-2">
+                                            <span>{arsip.perihal}</span>
+                                            {(arsip.googleDriveLink || arsip.filePath) && (
+                                                <div className="flex items-center gap-1">
+                                                    {arsip.googleDriveLink && (
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="Dokumen tersedia di Google Drive">
+                                                            <Eye size={12} className="mr-1" />
+                                                            GDrive
+                                                        </span>
+                                                    )}
+                                                    {arsip.filePath && !arsip.googleDriveLink && (
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800" title="File tersedia di server">
+                                                            <FileText size={12} className="mr-1" />
+                                                            File
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </td>
                                     <td className="p-3 text-gray-600">{arsip.nomorSurat}</td>
                                     <td className="p-3 text-gray-600">{arsip.tujuanSurat}</td>
                                     <td className="p-3 text-gray-600">{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</td>
@@ -1618,7 +1709,39 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                         </span>
                                     </td>
                                     <td className="p-3 text-center">
-                                        <div className="flex justify-center gap-3">
+                                        <div className="flex justify-center gap-2">
+                                            {/* Google Drive Actions */}
+                                            {arsip.googleDriveLink && (
+                                                <>
+                                                    <button 
+                                                        onClick={() => window.open(arsip.googleDriveLink, '_blank')} 
+                                                        className="text-blue-500 hover:text-blue-700" 
+                                                        title="Lihat Dokumen di Google Drive"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => {
+                                                            const downloadLink = arsip.googleDriveLink.replace('/view', '/export?format=pdf');
+                                                            window.open(downloadLink, '_blank');
+                                                        }} 
+                                                        className="text-green-500 hover:text-green-700" 
+                                                        title="Download Dokumen"
+                                                    >
+                                                        <Download size={16} />
+                                                    </button>
+                                                </>
+                                            )}
+                                            {/* Traditional File Actions */}
+                                            {arsip.filePath && !arsip.googleDriveLink && (
+                                                <button 
+                                                    onClick={() => window.open(`${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`, '_blank')} 
+                                                    className="text-blue-500 hover:text-blue-700" 
+                                                    title="Lihat File"
+                                                >
+                                                    <Eye size={16} />
+                                                </button>
+                                            )}
                                             <button onClick={() => setEditingArsip(arsip)} className="text-primary-500 hover:text-primary-700" title="Edit">
                                                 <Edit size={16} />
                                             </button>
@@ -1724,9 +1847,61 @@ const AdvancedSearchView = ({ arsipList, ...props }) => {
                     </div>
                      <div>
                         <label htmlFor="klasifikasi" className="block text-sm font-medium text-gray-700 mb-1">Kode Klasifikasi</label>
-                        <select name="klasifikasi" id="klasifikasi" value={filters.klasifikasi} onChange={handleFilterChange} className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        <select 
+                            name="klasifikasi" 
+                            id="klasifikasi" 
+                            value={filters.klasifikasi} 
+                            onChange={handleFilterChange} 
+                            className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                            style={{
+                                fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace'
+                            }}
+                        >
                            <option value="semua">Semua Klasifikasi</option>
-                           {props.klasifikasiList.sort((a,b) => a.kode.localeCompare(b.kode, undefined, {numeric: true})).map(k => <option key={k.id} value={k.kode}>{k.kode} - {k.deskripsi}</option>)}
+                           {props.klasifikasiList.sort((a,b) => a.kode.localeCompare(b.kode, undefined, {numeric: true})).map(k => {
+                               const parts = k.kode.split('.');
+                               const isMainCategory = parts.length === 1 && parts[0].length === 3;
+                               const isSubCategory = parts.length === 2;
+                               const isSubSubCategory = parts.length === 3;
+                               const indentationLevel = parts.length - 1;
+                               
+                               let icon = '';
+                               let bgColor = '#ffffff';
+                               let textColor = '#374151';
+                               
+                               if (isMainCategory) {
+                                   icon = '📁';
+                                   bgColor = '#eff6ff';
+                                   textColor = '#1e40af';
+                               } else if (isSubCategory) {
+                                   icon = '📂';
+                                   bgColor = '#f0fdf4';
+                                   textColor = '#15803d';
+                               } else if (isSubSubCategory) {
+                                   icon = '📄';
+                                   bgColor = '#fff7ed';
+                                   textColor = '#ea580c';
+                               } else {
+                                   icon = '📄';
+                                   bgColor = '#f9fafb';
+                                   textColor = '#6b7280';
+                               }
+                               
+                               return (
+                                   <option 
+                                       key={k.id} 
+                                       value={k.kode}
+                                       style={{
+                                           backgroundColor: bgColor,
+                                           color: textColor,
+                                           fontSize: '13px',
+                                           paddingLeft: `${8 + indentationLevel * 16}px`
+                                       }}
+                                   >
+                                       {icon} {k.kode} - {k.deskripsi}
+                                   </option>
+                               );
+                           })}
                         </select>
                     </div>
                 </div>
