@@ -473,7 +473,7 @@ export default function App() {
                             currentView === 'semua' ? 'Semua Arsip' :
                             currentView === 'klasifikasi' ? 'Kode Klasifikasi' :
                             currentView === 'cari' ? 'Pencarian Lanjutan' :
-                            currentView === 'laporan' ? 'Laporan' : 'SIMANTEP'
+                            currentView === 'laporan' ? 'Laporan' : 'Sistem Arsip'
                         }
                         searchValue={searchQuery}
                         onSearchChange={setSearchQuery}
@@ -598,7 +598,6 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
     });
     const [manualKodeInput, setManualKodeInput] = useState('');
     const [useManualKode, setUseManualKode] = useState(false);
-    const [file, setFile] = useState(null);
     const [existingFile, setExistingFile] = useState({ fileName: '', filePath: '' });
     const [googleDriveFile, setGoogleDriveFile] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -626,7 +625,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                     id: arsipToEdit.googleDriveFileId,
                     name: arsipToEdit.fileName,
                     webViewLink: arsipToEdit.googleDriveViewLink,
-                    downloadLink: arsipToEdit.googleDriveDownloadLink
+                    downloadLink: arsipToEdit.googleDriveLink
                 });
             }
             
@@ -685,52 +684,12 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
         }
     };
 
-    const handleFileChange = (e) => {
-        if (e.target.files[0]) {
-            setFile(e.target.files[0]);
-            setUploadProgress(100); // Simulasi upload selesai
-        }
-    };
-    
     const handleGoogleDriveFileUploaded = (fileData) => {
         setGoogleDriveFile(fileData);
-        // Clear traditional file if Google Drive file is uploaded
-        setFile(null);
     };
     
     const handleGoogleDriveFileRemoved = () => {
         setGoogleDriveFile(null);
-    };
-    
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        setIsDragOver(true);
-    };
-    
-    const handleDragLeave = (e) => {
-        e.preventDefault();
-        setIsDragOver(false);
-    };
-    
-    const handleDrop = (e) => {
-        e.preventDefault();
-        setIsDragOver(false);
-        
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            setFile(e.dataTransfer.files[0]);
-            
-            // Simulasi progress upload
-            setUploadProgress(0);
-            const interval = setInterval(() => {
-                setUploadProgress(prev => {
-                    if (prev >= 100) {
-                        clearInterval(interval);
-                        return 100;
-                    }
-                    return prev + 10;
-                });
-            }, 100);
-        }
     };
 
     const validateForm = () => {
@@ -787,7 +746,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             fileName: arsipToEdit?.fileName || null,
         };
 
-        // Handle file upload (Google Drive or traditional)
+        // Handle Google Drive file upload only
         if (googleDriveFile) {
             // Use Google Drive file data
             fileData = {
@@ -795,32 +754,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 fileName: googleDriveFile.name,
                 googleDriveFileId: googleDriveFile.id,
                 googleDriveViewLink: googleDriveFile.webViewLink,
-                googleDriveDownloadLink: googleDriveFile.downloadLink || googleDriveFile.webContentLink,
-            };
-        } else if (file) {
-            // Traditional file upload to Supabase
-            // Jika ada file lama, hapus dulu
-            if (arsipToEdit?.filePath) {
-                const { error: deleteError } = await supabase.storage.from('arsip-files').remove([arsipToEdit.filePath]);
-                if (deleteError) console.warn("Could not delete old file:", deleteError.message);
-            }
-
-            const newFilePath = `public/${Date.now()}-${file.name}`;
-            const { error: uploadError } = await supabase.storage.from('arsip-files').upload(newFilePath, file);
-
-            if (uploadError) {
-                console.error("Upload failed:", uploadError);
-                showNotification(`Gagal mengunggah file: ${uploadError.message}`, 'error');
-                setIsLoading(false);
-                return;
-            }
-            
-            fileData = {
-                filePath: newFilePath,
-                fileName: file.name,
-                googleDriveFileId: null,
-                googleDriveViewLink: null,
-                googleDriveDownloadLink: null,
+                googleDriveLink: googleDriveFile.downloadLink || googleDriveFile.webContentLink,
             };
         }
 
@@ -859,8 +793,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
             fileName: fileData.fileName,
             googleDriveFileId: fileData.googleDriveFileId,
             googleDriveViewLink: fileData.googleDriveViewLink,
-            googleDriveDownloadLink: fileData.googleDriveDownloadLink,
-            googleDriveLink: formData.googleDriveLink || null,
+            googleDriveLink: fileData.googleDriveLink || formData.googleDriveLink || null,
         };
 
         try {
@@ -918,7 +851,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
     }, [klasifikasiList]);
 
     return (
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-5xl mx-auto overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-7xl mx-auto overflow-hidden">
             {/* Header dengan Progress */}
             <div className="bg-gradient-to-r from-primary-500 to-primary-600 px-8 py-6 text-white">
                 {/* Progress Steps */}
@@ -970,7 +903,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                             <div>
                                 <InputField 
                                     name="tanggalSurat" 
-                                    label="Tanggal Surat *" 
+                                    label="Tanggal Surat" 
                                     type="date" 
                                     value={formData.tanggalSurat} 
                                     onChange={handleChange} 
@@ -1011,7 +944,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                         <div className="md:col-span-2">
                             <InputField 
                                 name="perihal" 
-                                label="Perihal / Isi Surat *" 
+                                label="Perihal / Isi Surat" 
                                 value={formData.perihal} 
                                 onChange={handleChange} 
                                 required 
@@ -1241,67 +1174,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                             </div>
                         </div>
                         
-                        {/* Fallback: Traditional File Upload */}
-                        {!googleDriveFile && (
-                                <div className="mt-4">
-                                    <div className="text-center text-sm text-gray-500 mb-3">
-                                        <span className="bg-gray-100 px-3 py-1 rounded-full">atau upload tradisional</span>
-                                    </div>
-                                    <div 
-                                        className={`relative border-2 border-dashed rounded-xl p-6 transition-all duration-300 ${
-                                            isDragOver 
-                                                ? 'border-primary-400 bg-primary-50 scale-105' 
-                                                : 'border-gray-300 hover:border-primary-300 hover:bg-gray-50'
-                                        }`}
-                                        onDragOver={handleDragOver}
-                                        onDragLeave={handleDragLeave}
-                                        onDrop={handleDrop}
-                                    >
-                                        <div className="text-center">
-                                            {file ? (
-                                                <div className="space-y-3">
-                                                    <div className="flex items-center justify-center w-12 h-12 mx-auto bg-green-100 rounded-full">
-                                                        <CheckCircle className="w-6 h-6 text-green-600" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                                                        <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => { setFile(null); setUploadProgress(0); }}
-                                                        className="text-xs text-red-600 hover:text-red-800 font-medium"
-                                                    >
-                                                        Hapus File
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div className="space-y-3">
-                                                    <div className="flex items-center justify-center w-12 h-12 mx-auto bg-gray-100 rounded-full">
-                                                        <Upload className="w-6 h-6 text-gray-600" />
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-medium text-gray-900">
-                                                            {isDragOver ? 'Lepaskan file di sini' : 'Upload ke server lokal'}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500 mt-1">PDF, DOCX, PNG, JPG (Maks. 10MB)</p>
-                                                    </div>
-                                                    <label className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl text-sm font-medium cursor-pointer transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
-                                                        <FilePlus className="w-4 h-4 mr-2" />
-                                                        Pilih File
-                                                        <input 
-                                                            type="file" 
-                                                            className="sr-only" 
-                                                            onChange={handleFileChange}
-                                                            accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif"
-                                                        />
-                                                    </label>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+
                         
                         {/* Existing File Display for Legacy Files */}
                         {!file && !googleDriveFile && existingFile.fileName && (
@@ -1944,8 +1817,8 @@ const InfoModal = ({ onClose }) => {
                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors duration-200"><XCircle size={24} /></button>
                 <div className="flex flex-col items-center text-center">
                     <Archive size={48} className="text-primary-500 mb-4" />
-                    <h2 className="text-2xl font-bold mb-3 text-gray-900">Aplikasi SIMANTEP</h2>
-                    <p className="text-gray-600 mb-2 leading-relaxed">Sistem Informasi Manajemen Kearsipan Terpadu</p>
+                    <h2 className="text-2xl font-bold mb-3 text-gray-900">Sistem Arsip Digital</h2>
+                    <p className="text-gray-600 mb-2 leading-relaxed">Aplikasi Manajemen Kearsipan Digital</p>
                     <p className="text-sm text-gray-500">Aplikasi manajemen arsip digital yang ditenagai oleh React, Vite, Supabase, dan di-hosting di Vercel.</p>
                 </div>
             </div>
