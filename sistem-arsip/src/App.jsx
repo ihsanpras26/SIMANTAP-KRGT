@@ -918,18 +918,11 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
     }, [klasifikasiList]);
 
     return (
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-4xl mx-auto overflow-hidden">
+        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 max-w-5xl mx-auto overflow-hidden">
             {/* Header dengan Progress */}
-            <div className="bg-gradient-to-r from-primary-500 to-primary-600 p-6 text-white">
-                <div className="flex items-center justify-end mb-4">
-                    <div className="flex items-center gap-2">
-                        <Archive size={24} />
-                        <span className="text-sm opacity-90">SIMANTEP</span>
-                    </div>
-                </div>
-                
+            <div className="bg-gradient-to-r from-primary-500 to-primary-600 px-8 py-6 text-white">
                 {/* Progress Steps */}
-                <div className="flex items-center justify-center space-x-4">
+                <div className="flex items-center justify-center space-x-6">
                     <div className={`flex items-center ${currentStep >= 1 ? 'text-white' : 'text-primary-200'}`}>
                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                             currentStep >= 1 ? 'bg-white text-primary-600' : 'bg-primary-400'
@@ -950,11 +943,18 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 </div>
             </div>
             
-            <form onSubmit={handleSubmit} className="p-8">
+            <form onSubmit={handleSubmit} className="px-8 py-6">
                 {/* Step 1: Informasi Dasar */}
                 {currentStep === 1 && (
-                    <div className="space-y-6 animate-fadeIn">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-8 animate-fadeIn">
+                        <div className="text-center mb-8">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
+                                <FileText size={28} className="text-primary-600" />
+                                Informasi Dasar Arsip
+                            </h2>
+                            <p className="text-gray-600 text-sm">Lengkapi informasi dasar dokumen arsip dengan teliti</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div>
                                 <InputField 
                                     name="nomorSurat" 
@@ -1008,7 +1008,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                             )}
                         </div>
                         
-                        <div>
+                        <div className="md:col-span-2">
                             <InputField 
                                 name="perihal" 
                                 label="Perihal / Isi Surat *" 
@@ -1022,37 +1022,40 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                             )}
                         </div>
                         
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-3">Kode Klasifikasi</label>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-semibold text-gray-800 mb-4 flex items-center gap-1">
+                                Kode Klasifikasi
+                                <span className="text-red-500 text-base">*</span>
+                            </label>
                             
                             {/* Toggle Switch untuk memilih mode input */}
-                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-4">
-                                <div className="flex items-center gap-3">
-                                    <span className="text-sm font-medium text-gray-700">Mode Input:</span>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`text-sm transition-colors ${!useManualKode ? 'text-primary-600 font-medium' : 'text-gray-500'}`}>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 mb-6">
+                                <div className="flex items-center gap-4 mb-3 sm:mb-0">
+                                    <span className="text-sm font-semibold text-gray-700">Mode Input:</span>
+                                    <div className="flex items-center gap-3">
+                                        <span className={`text-sm transition-all duration-200 ${!useManualKode ? 'text-primary-600 font-semibold' : 'text-gray-500'}`}>
                                             📋 Pilih dari Daftar
                                         </span>
                                         <button
                                             type="button"
                                             onClick={() => setUseManualKode(!useManualKode)}
-                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 hover:shadow-md ${
                                                 useManualKode ? 'bg-primary-600' : 'bg-gray-300'
                                             }`}
                                         >
                                             <span
-                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 shadow-sm ${
                                                     useManualKode ? 'translate-x-6' : 'translate-x-1'
                                                 }`}
                                             />
                                         </button>
-                                        <span className={`text-sm transition-colors ${useManualKode ? 'text-primary-600 font-medium' : 'text-gray-500'}`}>
+                                        <span className={`text-sm transition-all duration-200 ${useManualKode ? 'text-primary-600 font-semibold' : 'text-gray-500'}`}>
                                             ✏️ Input Manual
                                         </span>
                                     </div>
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                    {useManualKode ? 'Ketik kode klasifikasi secara manual' : 'Pilih dari daftar yang tersedia'}
+                                <div className="text-xs text-gray-600 bg-white px-3 py-1 rounded-full border">
+                                    {useManualKode ? '💡 Ketik kode klasifikasi secara manual' : '💡 Pilih dari daftar yang tersedia'}
                                 </div>
                             </div>
                             
@@ -1066,17 +1069,22 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                     className="w-full"
                                 />
                             ) : (
-                                <select 
-                                    id="kodeKlasifikasi" 
-                                    name="kodeKlasifikasi" 
-                                    value={formData.kodeKlasifikasi} 
-                                    onChange={handleChange}
-                                    className="w-full px-3 py-2 border border-gray-300 bg-white rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                    style={{
-                                        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace'
-                                    }}
-                                >
-                                    <option value="" className="text-gray-500">Pilih Kode Klasifikasi (Opsional)</option>
+                                <div className="relative">
+                                    <select 
+                                        id="kodeKlasifikasi" 
+                                        name="kodeKlasifikasi" 
+                                        value={formData.kodeKlasifikasi} 
+                                        onChange={handleChange}
+                                        className="w-full px-4 py-3.5 border-2 border-gray-200 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 hover:border-gray-300 hover:shadow-sm transition-all duration-200 text-sm"
+                                        style={{
+                                            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+                                            maxWidth: '100%',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            whiteSpace: 'nowrap'
+                                        }}
+                                    >
+                                        <option value="" className="text-gray-500">Pilih Kode Klasifikasi (Opsional)</option>
                                     {groupedKlasifikasi.map(group => {
                                         if (group.subItems && group.subItems.length > 0) {
                                             return (
@@ -1095,7 +1103,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                                             fontSize: '14px'
                                                         }}
                                                     >
-                                                        📁 {group.kode.toUpperCase()} - {group.deskripsi.toUpperCase()}
+                                                        📁 {group.kode.toUpperCase()} - {group.deskripsi.length > 40 ? group.deskripsi.substring(0, 40) + '...' : group.deskripsi}
                                                     </option>
                                                     {group.subItems.map(item => {
                                                         const indentationLevel = item.kode.split('.').length - 1;
@@ -1130,7 +1138,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                                                     paddingLeft: `${8 + indentationLevel * 16}px`
                                                                 }}
                                                             >
-                                                                {indentString}{prefix}{item.kode} - {item.deskripsi}
+                                                                {indentString}{prefix}{item.kode} - {item.deskripsi.length > 35 ? item.deskripsi.substring(0, 35) + '...' : item.deskripsi}
                                                             </option>
                                                         )
                                                     })}
@@ -1148,12 +1156,16 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                                         fontSize: '14px'
                                                     }}
                                                 >
-                                                    📁 {group.kode.toUpperCase()} - {group.deskripsi.toUpperCase()}
+                                                    📁 {group.kode.toUpperCase()} - {group.deskripsi.length > 40 ? group.deskripsi.substring(0, 40) + '...' : group.deskripsi}
                                                 </option>
                                             );
                                         }
                                     })}
-                                </select>
+                                    </select>
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                                        <span className="text-primary-500 text-xs font-medium bg-primary-50 px-2 py-1 rounded-full">Wajib</span>
+                                    </div>
+                                </div>
                             )}
                             
                             {validationErrors.kodeKlasifikasi && (
@@ -1169,11 +1181,11 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                         </div>
                         
                         {/* Navigation Buttons Step 1 */}
-                        <div className="flex justify-end pt-6">
+                        <div className="flex justify-end pt-8 border-t border-gray-200">
                             <button 
                                 type="button" 
                                 onClick={handleNextStep}
-                                className="px-8 py-3 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+                                className="px-8 py-3 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl transform hover:scale-105"
                             >
                                 Selanjutnya
                                 <ChevronRight size={20} />
@@ -1184,13 +1196,21 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 
                 {/* Step 2: File Upload & Review */}
                 {currentStep === 2 && (
-                    <div className="space-y-6 animate-fadeIn">
+                    <div className="space-y-8 animate-fadeIn">
+                        <div className="text-center mb-8">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3">
+                                <Paperclip size={28} className="text-primary-600" />
+                                Upload & Review Dokumen
+                            </h2>
+                            <p className="text-gray-600 text-sm">Upload dokumen arsip dan review informasi sebelum menyimpan</p>
+                        </div>
+                        
                         {/* Google Drive Link Input */}
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-3">
+                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+                            <label className="block text-sm font-semibold text-gray-700 mb-4">
                                 <span className="flex items-center gap-2">
                                     📁 Link Dokumen Google Drive
-                                    <span className="text-xs text-gray-500">(Opsional)</span>
+                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">Opsional</span>
                                 </span>
                             </label>
                             <div className="space-y-3">
@@ -1266,7 +1286,7 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                                         </p>
                                                         <p className="text-xs text-gray-500 mt-1">PDF, DOCX, PNG, JPG (Maks. 10MB)</p>
                                                     </div>
-                                                    <label className="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg text-sm font-medium cursor-pointer transition-colors duration-200">
+                                                    <label className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl text-sm font-medium cursor-pointer transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
                                                         <FilePlus className="w-4 h-4 mr-2" />
                                                         Pilih File
                                                         <input 
@@ -1305,42 +1325,38 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                             )}
 
                         {/* Step 2 Navigation Buttons */}
-                        <div className="flex justify-between pt-6">
+                        <div className="flex justify-between items-center pt-8 border-t border-gray-200">
                             <button 
                                 type="button" 
                                 onClick={handlePrevStep}
-                                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
+                                className="px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-all duration-200 flex items-center gap-2 hover:shadow-md"
                             >
                                 <ChevronRight className="w-5 h-5 rotate-180" />
                                 Kembali
                             </button>
                             
-                            <div className="flex gap-3">
+                            <div className="flex gap-4">
                                 <button 
                                     type="button" 
                                     onClick={onFinish} 
-                                    className="px-6 py-3 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-colors duration-200"
+                                    className="px-6 py-3 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium transition-all duration-200 hover:shadow-md"
                                 >
                                     Batal
                                 </button>
                                 <button 
                                     type="submit" 
                                     disabled={isLoading} 
-                                    className="px-8 py-3 rounded-lg bg-primary-600 hover:bg-primary-700 text-white disabled:opacity-50 flex items-center gap-2 font-medium transition-colors duration-200"
+                                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:transform-none"
                                 >
                                     {isLoading ? (
                                         <>
-                                            <span className="animate-pulse">Menyimpan</span>
-                                            <span className="flex space-x-1">
-                                                <span className="animate-bounce delay-0">.</span>
-                                                <span className="animate-bounce delay-100">.</span>
-                                                <span className="animate-bounce delay-200">.</span>
-                                            </span>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                                            <span>Menyimpan...</span>
                                         </>
                                     ) : (
                                         <>
-                                            {arsipToEdit ? 'Simpan Perubahan' : 'Simpan Arsip'}
                                             <CheckCircle className="w-5 h-5" />
+                                            {arsipToEdit ? 'Simpan Perubahan' : 'Simpan Arsip'}
                                         </>
                                     )}
                                 </button>
