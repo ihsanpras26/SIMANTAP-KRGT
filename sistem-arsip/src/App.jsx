@@ -2114,6 +2114,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                             )})}
                         </tbody>
                     </table>
+                </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 {paginatedData.map(arsip => {
@@ -2268,10 +2269,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
     );
 };
 
-// Komponen lain seperti AdvancedSearchView, ReportingView, InfoModal, dll. akan membutuhkan modifikasi serupa pada logika fetching dan filtering data.
-// Untuk mempersingkat, saya akan menyertakan kerangka dasarnya saja.
 const AdvancedSearchView = ({ arsipList, ...props }) => {
-    // ... Logika filter tetap sama, karena filtering dilakukan di client-side pada 'arsipList'
     const [filters, setFilters] = useState({
         keyword: '',
         startDate: '',
