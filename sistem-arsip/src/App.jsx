@@ -38,20 +38,35 @@ import {
 import DevIndicator from './components/DevIndicator.jsx'
 import './animations.css'
 
-// Add line-clamp utility styles
-const lineClampStyles = `
+// Add line-clamp utility styles and animations
+const customStyles = `
   .line-clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .animate-slideDown {
+    animation: slideDown 0.3s ease-out;
+  }
 `;
 
 // Inject styles
 if (typeof document !== 'undefined') {
   const styleElement = document.createElement('style');
-  styleElement.textContent = lineClampStyles;
+  styleElement.textContent = customStyles;
   document.head.appendChild(styleElement);
 }
 import InputField from './InputField.jsx'
@@ -1890,54 +1905,166 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                     </div>
                 </div>
                 
-                {/* Search and Filters - More compact layout */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-6 gap-3 mb-4">
-                    {/* Search */}
-                    <div className="lg:col-span-2">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                {/* Advanced Search System - Enhanced UI/UX */}
+                <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-xl border border-indigo-100 p-6 mb-6">
+                    {/* Search Header */}
+                    <div className="mb-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                                    Pencarian Arsip
+                                </h2>
+                                <p className="text-sm text-gray-600 mt-1">
+                                    Temukan dokumen dengan cepat menggunakan filter advanced
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                {/* Search Stats */}
+                                <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                                        <span className="text-sm font-medium text-gray-700">
+                                            {filteredAndSortedData.length} hasil ditemukan
+                                        </span>
+                                    </div>
+                                </div>
+                                {/* View Mode Toggle */}
+                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-1 flex">
+                                    <button
+                                        onClick={() => setViewMode('table')}
+                                        className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
+                                            viewMode === 'table' 
+                                                ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg' 
+                                                : 'text-gray-600 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                        <span className="text-sm font-medium">Tabel</span>
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('grid')}
+                                        className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
+                                            viewMode === 'grid' 
+                                                ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg' 
+                                                : 'text-gray-600 hover:bg-gray-50'
+                                        }`}
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                                        </svg>
+                                        <span className="text-sm font-medium">Grid</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Main Search Bar */}
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
+                            <div className="relative bg-white rounded-2xl border-2 border-transparent hover:border-indigo-200 transition-all duration-300 shadow-lg">
+                                <div className="flex items-center">
+                                    <div className="pl-6">
+                                        <Search className="text-indigo-500" size={24} />
+                                    </div>
                             <input
                                 type="text"
-                                placeholder="Cari perihal, nomor surat..."
+                                        placeholder="Ketik untuk mencari dokumen... (nomor surat, perihal, pengirim, tujuan)"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                            />
+                                        className="w-full px-4 py-4 text-lg bg-transparent outline-none placeholder-gray-400"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                // Trigger search automatically
+                                            }
+                                        }}
+                                    />
+                                    {searchTerm && (
+                                        <button
+                                            onClick={() => setSearchTerm('')}
+                                            className="pr-4 text-gray-400 hover:text-gray-600 transition-colors"
+                                        >
+                                            <XCircle size={20} />
+                                        </button>
+                                    )}
+                                    <button className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-6 py-3 rounded-r-2xl hover:from-indigo-600 hover:to-purple-600 transition-all duration-200 flex items-center gap-2 shadow-lg">
+                                        <Search size={18} />
+                                        <span className="font-medium">Cari</span>
+                                    </button>
+                                </div>
                         </div>
                     </div>
                     
-                    {/* Advanced Search Toggle */}
-                    <div>
-                        <Button
+                        {/* Quick Search Tags */}
+                        <div className="mt-4 flex items-center gap-2 flex-wrap">
+                            <span className="text-sm text-gray-600">Pencarian cepat:</span>
+                            {['Surat Masuk', 'Surat Keluar', 'Memo', 'Pengumuman', 'Undangan'].map(tag => (
+                                <button
+                                    key={tag}
+                                    onClick={() => setSearchTerm(tag)}
+                                    className="px-3 py-1 bg-white border border-gray-200 rounded-full text-sm text-gray-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all duration-200"
+                                >
+                                    {tag}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    
+                    {/* Advanced Filters */}
+                    <div className="space-y-4">
+                        {/* Filter Toggle */}
+                        <button
                             onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-                            variant={showAdvancedSearch ? "default" : "outline"}
-                            size="sm"
-                            className="w-full h-[38px] text-sm"
+                            className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-indigo-300 transition-all duration-200 group"
                         >
-                            <Filter size={14} className="mr-1" />
-                            Filter
-                        </Button>
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors">
+                                    <Filter className="text-indigo-600" size={18} />
                     </div>
-                    
-                    {/* Status Filter */}
-                    <div>
-                        <select
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                        >
-                            <option value="semua">Semua Status</option>
-                            <option value="aktif">Aktif</option>
-                            <option value="inaktif">Inaktif</option>
-                        </select>
-                    </div>
-                    
-                    {/* Klasifikasi Filter */}
-                    <div>
+                                <span className="font-medium text-gray-700">Filter Lanjutan</span>
+                            </div>
+                            <ChevronRight className={`text-gray-400 transition-transform duration-200 ${showAdvancedSearch ? 'rotate-90' : ''}`} size={20} />
+                        </button>
+
+                        {/* Expandable Filter Section */}
+                        {showAdvancedSearch && (
+                            <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6 animate-slideDown">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {/* Date Range Filter */}
+                                    <div className="space-y-3">
+                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                            <Calendar size={16} className="text-indigo-500" />
+                                            Rentang Tanggal Surat
+                                        </label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <input
+                                                type="date"
+                                                value={startDate}
+                                                onChange={(e) => setStartDate(e.target.value)}
+                                                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
+                                                placeholder="Dari"
+                                            />
+                                            <input
+                                                type="date"
+                                                value={endDate}
+                                                onChange={(e) => setEndDate(e.target.value)}
+                                                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
+                                                placeholder="Sampai"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Classification Filter */}
+                                    <div className="space-y-3">
+                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                            <FolderKanban size={16} className="text-indigo-500" />
+                                            Klasifikasi Dokumen
+                                        </label>
                         <select
                             value={filterKlasifikasi}
                             onChange={(e) => setFilterKlasifikasi(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
                         >
                             <option value="semua">Semua Klasifikasi</option>
                             {uniqueKlasifikasi.map(k => (
@@ -1948,36 +2075,126 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                         </select>
                     </div>
                     
-                    {/* Sort By */}
-                    <div>
+                                    {/* Sort Options */}
+                                    <div className="space-y-3">
+                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                            <Layers size={16} className="text-indigo-500" />
+                                            Urutkan Berdasarkan
+                                        </label>
+                                        <div className="flex gap-2">
                         <select
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
                         >
                             <option value="tanggalSurat">Tanggal Surat</option>
                             <option value="perihal">Perihal</option>
                             <option value="nomorSurat">Nomor Surat</option>
-                            <option value="status">Status</option>
+                                                <option value="createdAt">Tanggal Input</option>
                         </select>
-                    </div>
-                    
-                    {/* Sort Order & View Mode */}
-                    <div className="flex gap-2">
                         <button
                             onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                            className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center"
+                                                className={`px-3 py-2 border rounded-lg transition-all duration-200 ${
+                                                    sortOrder === 'desc' 
+                                                        ? 'bg-indigo-50 border-indigo-300 text-indigo-700' 
+                                                        : 'border-gray-200 hover:bg-gray-50'
+                                                }`}
                             title={`Urutkan ${sortOrder === 'asc' ? 'Menurun' : 'Menaik'}`}
                         >
-                            {sortOrder === 'asc' ? '↑' : '↓'}
+                                                {sortOrder === 'asc' ? (
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                                                    </svg>
+                                                ) : (
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
+                                                    </svg>
+                                                )}
                         </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Document Type Filter */}
+                                    <div className="space-y-3">
+                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                            <FileText size={16} className="text-indigo-500" />
+                                            Tipe Dokumen
+                                        </label>
+                                        <div className="flex flex-wrap gap-2">
+                                            <label className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-all cursor-pointer">
+                                                <input type="checkbox" className="text-indigo-600 rounded focus:ring-indigo-500" />
+                                                <span className="text-sm">Dengan File</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-all cursor-pointer">
+                                                <input type="checkbox" className="text-indigo-600 rounded focus:ring-indigo-500" />
+                                                <span className="text-sm">Tanpa File</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
+                                    {/* Status Filter */}
+                                    <div className="space-y-3">
+                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                            <Clock size={16} className="text-indigo-500" />
+                                            Status Retensi
+                                        </label>
+                                        <select
+                                            value={filterStatus}
+                                            onChange={(e) => setFilterStatus(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
+                                        >
+                                            <option value="semua">Semua Status</option>
+                                            <option value="aktif">Aktif</option>
+                                            <option value="inaktif">Inaktif</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Additional Filters */}
+                                    <div className="space-y-3">
+                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                            <User size={16} className="text-indigo-500" />
+                                            Pengirim/Tujuan
+                                        </label>
+                                        <input
+                                            type="text"
+                                            placeholder="Filter berdasarkan pengirim atau tujuan"
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Action Buttons */}
+                                <div className="flex items-center justify-between pt-6 border-t border-gray-100">
                         <button
-                            onClick={() => setViewMode(viewMode === 'table' ? 'grid' : 'table')}
-                            className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors duration-200 flex items-center justify-center"
-                            title={`Tampilan ${viewMode === 'table' ? 'Grid' : 'Tabel'}`}
-                        >
-                            {viewMode === 'table' ? '⊞' : '☰'}
+                                        onClick={() => {
+                                            setSearchTerm('');
+                                            setFilterStatus('semua');
+                                            setFilterKlasifikasi('semua');
+                                            setStartDate('');
+                                            setEndDate('');
+                                            setSortBy('tanggalSurat');
+                                            setSortOrder('desc');
+                                        }}
+                                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200 flex items-center gap-2"
+                                    >
+                                        <XCircle size={16} />
+                                        Reset Semua Filter
+                                    </button>
+                                    <div className="flex gap-3">
+                                        <button 
+                                            onClick={() => setShowAdvancedSearch(false)}
+                                            className="px-6 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200"
+                                        >
+                                            Tutup
+                                        </button>
+                                        <button className="px-6 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-all duration-200 flex items-center gap-2 shadow-lg">
+                                            <Search size={16} />
+                                            Terapkan Filter
                         </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -2050,18 +2267,18 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                             </div>
                                                             <div>
                                                                 <div className="font-mono text-sm font-bold text-gray-900 mb-1">{arsip.nomorSurat}</div>
-                                                                <div className="flex items-center gap-2">
+                                                            <div className="flex items-center gap-2">
                                                                     {arsip.googleDriveLink || arsip.filePath ? (
                                                                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
                                                                             <CheckCircle size={10} className="mr-1" />
                                                                             Tersedia
-                                                                        </span>
+                                                                    </span>
                                                                     ) : (
                                                                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
                                                                             <XCircle size={10} className="mr-1" />
                                                                             Tidak Ada File
-                                                                        </span>
-                                                                    )}
+                                                                    </span>
+                                                                )}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -2073,7 +2290,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                                 <p className="text-sm text-gray-500">Kepada: {arsip.tujuanSurat}</p>
                                                             )}
                                                         </div>
-                                                    </td>
+                                    </td>
                                                     <td className="py-6 px-6">
                                                         <div className="text-sm font-medium text-gray-900">
                                                             {new Date(arsip.tanggalSurat).toLocaleDateString('id-ID', { 
@@ -2090,26 +2307,26 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                                     <div className="flex items-center bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-2 rounded-xl border border-indigo-200 shadow-sm hover:shadow-md transition-all duration-200">
                                                                         <span className="text-sm font-mono font-bold text-indigo-700">
                                                                             {arsip.kodeKlasifikasi}
-                                                                        </span>
+                                                                </span>
                                                                         <Info size={14} className="ml-2 text-indigo-500 opacity-60 group-hover:opacity-100 transition-opacity" />
-                                                                    </div>
+                                                        </div>
                                                                     <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-20">
                                                                         <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 max-w-xs shadow-xl">
                                                                             <div className="font-semibold mb-1">Klasifikasi:</div>
                                                                             <div className="text-gray-200">
                                                                                 {getKlasifikasiDesc(arsip.kodeKlasifikasi)}
-                                                                            </div>
+                                                                </div>
                                                                             <div className="absolute top-full left-1/2 transform -translate-x-1/2">
                                                                                 <div className="border-4 border-transparent border-t-gray-900"></div>
-                                                                            </div>
-                                                                        </div>
+                                                                    </div>
                                                                     </div>
                                                                 </div>
+                                                            </div>
                                                             ) : (
                                                                 <span className="text-gray-400 text-sm">Tidak ada</span>
-                                                            )}
-                                                        </div>
-                                                    </td>
+                                            )}
+                                        </div>
+                                    </td>
                                                     <td className="py-6 px-6" onClick={(e) => e.stopPropagation()}>
                                                         <div className="flex items-center justify-center gap-2">
                                                             {/* View Action */}
@@ -2215,7 +2432,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                     )}
                                                     <div>
                                                         <div className="font-mono text-sm font-bold text-gray-900 mb-1">{arsip.nomorSurat}</div>
-                                                        <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2">
                                                             {arsip.googleDriveLink || arsip.filePath ? (
                                                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
                                                                     <CheckCircle size={10} className="mr-1" />
@@ -2225,9 +2442,9 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
                                                                     <XCircle size={10} className="mr-1" />
                                                                     Tidak Ada File
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                                        </span>
+                                                    )}
+                                                </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -2254,7 +2471,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                     <div className="flex items-center bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-1 rounded-xl border border-indigo-200 shadow-sm">
                                                         <span className="text-xs font-mono font-bold text-indigo-700">
                                                             {arsip.kodeKlasifikasi}
-                                                        </span>
+                                                </span>
                                                     </div>
                                                 )}
                                             </div>
@@ -2263,7 +2480,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                             <div className="flex items-center justify-center gap-2 pt-4 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
                                                 {/* View Action */}
                                                 {(arsip.googleDriveLink || arsip.filePath) && (
-                                                    <button 
+                                                        <button 
                                                         onClick={() => {
                                                             if (arsip.googleDriveLink) {
                                                                 window.open(arsip.googleDriveLink, '_blank');
@@ -2276,12 +2493,12 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                     >
                                                         <Eye size={16} />
                                                         <span className="text-sm">Lihat</span>
-                                                    </button>
-                                                )}
+                                                        </button>
+                                                    )}
                                                 
                                                 {/* Download Action */}
                                                 {(arsip.googleDriveLink || arsip.filePath) && (
-                                                    <button 
+                                                        <button 
                                                         onClick={async () => {
                                                             try {
                                                                 let downloadUrl;
@@ -2317,26 +2534,26 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                     >
                                                         <Download size={16} />
                                                         <span className="text-sm">Download</span>
-                                                    </button>
-                                                )}
+                                                        </button>
+                                                    )}
                                                 
                                                 {/* Edit Action */}
-                                                <button 
-                                                    onClick={() => setEditingArsip(arsip)} 
+                                                    <button 
+                                                        onClick={() => setEditingArsip(arsip)} 
                                                     className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md" 
-                                                    title="Edit Arsip"
-                                                >
+                                                        title="Edit Arsip"
+                                                    >
                                                     <Edit size={16} />
-                                                </button>
+                                                    </button>
                                                 
                                                 {/* Delete Action */}
-                                                <button 
-                                                    onClick={() => handleDelete(arsip.id, arsip.filePath, arsip.perihal)} 
+                                                    <button 
+                                                        onClick={() => handleDelete(arsip.id, arsip.filePath, arsip.perihal)} 
                                                     className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md" 
-                                                    title="Hapus Arsip"
-                                                >
+                                                        title="Hapus Arsip"
+                                                    >
                                                     <Trash2 size={16} />
-                                                </button>
+                                                    </button>
                                             </div>
                                         </div>
                                     );
@@ -2561,13 +2778,13 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                     <div className="flex flex-wrap gap-3">
                                         {arsip.googleDriveLink && (
                                             <>
-                                                <button
-                                                    onClick={() => window.open(arsip.googleDriveLink, '_blank')}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                                                >
-                                                    <Eye size={16} />
-                                                    Lihat di Google Drive
-                                                </button>
+                                            <button
+                                                onClick={() => window.open(arsip.googleDriveLink, '_blank')}
+                                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                                            >
+                                                <Eye size={16} />
+                                                Lihat di Google Drive
+                                            </button>
                                                 <button
                                                     onClick={async () => {
                                                         try {
@@ -2603,13 +2820,13 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                         )}
                                         {arsip.filePath && !arsip.googleDriveLink && (
                                             <>
-                                                <button
-                                                    onClick={() => window.open(`${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`, '_blank')}
-                                                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
-                                                >
-                                                    <Eye size={16} />
-                                                    Lihat File
-                                                </button>
+                                            <button
+                                                onClick={() => window.open(`${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`, '_blank')}
+                                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+                                            >
+                                                <Eye size={16} />
+                                                Lihat File
+                                            </button>
                                                 <button
                                                     onClick={async () => {
                                                         try {
