@@ -783,6 +783,11 @@ export default function App() {
                             currentView === 'arsip' ? 'Daftar Arsip' :
                             currentView === 'klasifikasi' ? 'Kode Klasifikasi' : 'Sistem Arsip'
                         }
+                        stats={{
+                            total: arsipList?.length || 0,
+                            active: activeArchives?.length || 0,
+                            inactive: inactiveArchives?.length || 0
+                        }}
                         onLogout={handleLogout}
                     />
 
@@ -1795,19 +1800,17 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                         </div>
                                         <div>
                                             <div className="font-bold text-lg text-gray-900">{mainCode}</div>
-                                            {mainItem ? (
+                                            {mainItem && mainCode.length > 3 && (
                                                 <div className="text-gray-600">{mainItem.deskripsi}</div>
-                                            ) : mainCode.length === 3 ? (
-                                                <div className="text-gray-500 italic">Kategori Pembatas</div>
-                                            ) : null}
+                                            )}
                                             <div className="flex items-center gap-4 mt-2">
-                                                {/* Untuk kode 3 digit: hanya tampilkan jumlah sub-kode */}
-                                                {mainCode.length === 3 && !mainItem ? (
+                                                {/* Untuk kode 3 digit: hanya tampilkan jumlah sub-kode tanpa retensi */}
+                                                {mainCode.length === 3 ? (
                                                     <span className="text-sm bg-white px-3 py-1 rounded-full text-blue-600 font-medium border border-blue-200">
                                                         📁 {subItems.length} sub-kode
                                                     </span>
-                                                ) : mainItem ? (
-                                                    /* Untuk kode yang ada datanya: tampilkan retensi */
+                                                ) : mainItem && mainCode.length > 3 ? (
+                                                    /* Untuk kode 4+ digit yang ada datanya: tampilkan retensi */
                                                     <>
                                                         <span className="text-sm bg-white px-2 py-1 rounded text-emerald-700 font-medium border border-emerald-200">
                                                             Aktif: {mainItem.retensiAktif} tahun
@@ -1816,16 +1819,16 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                                             Inaktif: {mainItem.retensiInaktif} tahun
                                                         </span>
                                                         {subItems.length > 0 && (
-                                                            <span className="text-sm text-blue-600 font-medium">
-                                                                {subItems.length} sub-kategori
+                                                            <span className="text-sm bg-white px-3 py-1 rounded-full text-blue-600 font-medium border border-blue-200">
+                                                                📁 {subItems.length} sub-kode
                                                             </span>
                                                         )}
                                                     </>
-                                                ) : subItems.length > 0 && (
-                                                    <span className="text-sm text-blue-600 font-medium">
-                                                        {subItems.length} sub-kategori
+                                                ) : subItems.length > 0 ? (
+                                                    <span className="text-sm bg-white px-3 py-1 rounded-full text-blue-600 font-medium border border-blue-200">
+                                                        📁 {subItems.length} sub-kode
                                                     </span>
-                                                )}
+                                                ) : null}
                                             </div>
                                         </div>
                                     </div>
