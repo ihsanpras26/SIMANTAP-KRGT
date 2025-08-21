@@ -7,7 +7,7 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { Badge } from './Badge';
 
-const Header = ({ title, subtitle, onLogout, className, stats }) => {
+const Header = ({ title, subtitle, onLogout, className }) => {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [notifications] = React.useState(0);
 
@@ -31,42 +31,8 @@ const Header = ({ title, subtitle, onLogout, className, stats }) => {
           </div>
         </div>
 
-        {/* Center Section - Archive Stats */}
-        <div className="flex-1 max-w-2xl mx-8">
-          {stats && (
-            <div className="flex items-center justify-center gap-4">
-              {/* Total Arsip */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg border border-blue-200">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                <span className="text-sm font-medium text-blue-700">
-                  {stats.total || 0} Total
-                </span>
-              </div>
-              
-              {/* Arsip Aktif */}
-              <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-emerald-50 rounded-lg border border-emerald-200">
-                <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm font-medium text-emerald-700">
-                  {stats.active || 0} Aktif
-                </span>
-              </div>
-              
-              {/* Arsip Inaktif */}
-              <div className="hidden lg:flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-lg border border-amber-200">
-                <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-sm font-medium text-amber-700">
-                  {stats.inactive || 0} Inaktif
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Center Section - Clean Space */}
+        <div className="flex-1"></div>
 
         {/* Right Section - Actions */}
         <div className="flex items-center gap-3">

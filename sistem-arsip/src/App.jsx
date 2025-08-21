@@ -783,11 +783,6 @@ export default function App() {
                             currentView === 'arsip' ? 'Daftar Arsip' :
                             currentView === 'klasifikasi' ? 'Kode Klasifikasi' : 'Sistem Arsip'
                         }
-                        stats={{
-                            total: arsipList?.length || 0,
-                            active: activeArchives?.length || 0,
-                            inactive: inactiveArchives?.length || 0
-                        }}
                         onLogout={handleLogout}
                     />
 
@@ -1781,7 +1776,15 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
             
             {/* Cards Layout */}
             <div className="space-y-4">
-                {Object.entries(groupedKlasifikasi).map(([mainCode, items]) => {
+                {Object.entries(groupedKlasifikasi)
+                    .sort(([a], [b]) => {
+                        // Prioritaskan kode "000" di atas
+                        if (a === '000') return -1;
+                        if (b === '000') return 1;
+                        // Sorting normal untuk yang lain
+                        return a.localeCompare(b, undefined, { numeric: true });
+                    })
+                    .map(([mainCode, items]) => {
                     const mainItem = items.find(i => i.kode === mainCode);
                     const subItems = items.filter(i => i.kode !== mainCode).sort((a, b) => a.kode.localeCompare(b.kode));
                     const isExpanded = selectedCategory === mainCode;
@@ -1800,9 +1803,11 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                         </div>
                                         <div>
                                             <div className="font-bold text-lg text-gray-900">{mainCode}</div>
-                                            {mainItem && mainCode.length > 3 && (
+                                            {mainItem ? (
                                                 <div className="text-gray-600">{mainItem.deskripsi}</div>
-                                            )}
+                                            ) : mainCode.length === 3 && subItems.length > 0 ? (
+                                                <div className="text-gray-500">Kategori Utama</div>
+                                            ) : null}
                                             <div className="flex items-center gap-4 mt-2">
                                                 {/* Untuk kode 3 digit: hanya tampilkan jumlah sub-kode tanpa retensi */}
                                                 {mainCode.length === 3 ? (
@@ -3026,8 +3031,8 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                         <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Tujuan</label>
                                         <p className="text-gray-900 font-bold mt-1">{arsip.tujuanSurat || 'Tidak disebutkan'}</p>
                                     </div>
+                                    </div>
                                 </div>
-                            </div>
                             
                             {/* Status Badge */}
                             <div className="ml-6">
@@ -3043,8 +3048,8 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                     Retensi: {formatDate(arsip.tanggalRetensi)}
                                 </p>
                             </div>
-                        </div>
-                    </div>
+                                </div>
+                            </div>
 
                     {/* Main Content */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -3055,14 +3060,14 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                 <div className="bg-white border border-gray-200 rounded-xl p-6">
                                     <h4 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-3">
                                         <FolderKanban size={24} className="text-indigo-600" />
-                                        Klasifikasi
+                                    Klasifikasi
                                     </h4>
                                     <div className="flex items-center gap-4">
                                         <div className="bg-gradient-to-r from-indigo-50 to-purple-50 px-4 py-3 rounded-xl border border-indigo-200">
                                             <span className="font-mono font-bold text-indigo-700 text-lg">{arsip.kodeKlasifikasi}</span>
-                                        </div>
+                                    </div>
                                         {klasifikasi && (
-                                            <div>
+                                    <div>
                                                 <p className="font-semibold text-gray-900 text-lg">{klasifikasi.deskripsi}</p>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-medium">
@@ -3071,10 +3076,10 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                                     <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded font-medium">
                                                         Inaktif: {klasifikasi.retensiInaktif} tahun
                                                     </span>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
+                                    </div>
+                                )}
+                            </div>
                                 </div>
                             )}
 
@@ -3092,7 +3097,7 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                     <div className="bg-gray-50 p-4 rounded-lg">
                                         <label className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Terakhir Diperbarui</label>
                                         <p className="text-gray-900 font-bold mt-1">{formatDateTime(arsip.updatedAt)}</p>
-                                    </div>
+                                </div>
                                 </div>
                             </div>
                         </div>
@@ -3112,25 +3117,25 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center text-white">
-                                                    {arsip.googleDriveLink ? (
+                                            {arsip.googleDriveLink ? (
                                                         <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                                                             <path d="M12.01 2C6.5 2 2.01 6.5 2.01 12s4.49 10 9.99 10c5.51 0 10-4.5 10-10S17.52 2 12.01 2z"/>
                                                         </svg>
                                                     ) : (
                                                         <FileText size={24} />
                                                     )}
-                                                </div>
-                                                <div>
+                                    </div>
+                                    <div>
                                                     <p className="font-bold text-gray-900 text-lg">
                                                         {arsip.googleDriveLink ? 'Google Drive' : 'File Server'}
                                                     </p>
                                                     <p className="text-gray-600">
                                                         {arsip.googleDriveLink ? 'Dokumen cloud' : 'File lokal'}
                                                     </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
+                                    </div>
+                                </div>
+                            </div>
+
                                         {/* Action Buttons */}
                                         <div className="grid grid-cols-2 gap-4">
                                             <button
@@ -3182,10 +3187,10 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                                 <Download size={20} />
                                                 Download
                                             </button>
-                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                    </div>
+                                        </div>
+                                    )}
                         </div>
                     </div>
                 </div>
