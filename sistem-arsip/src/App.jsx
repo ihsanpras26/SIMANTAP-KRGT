@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
@@ -72,6 +72,124 @@ if (typeof document !== 'undefined') {
 import InputField from './InputField.jsx'
 import GoogleDriveUpload from './components/GoogleDriveUpload.jsx'
 import { parseGoogleDriveLink, isValidGoogleDriveLink } from './utils/googleDriveUtils.js'
+
+// Autocomplete Input Component
+const AutocompleteInput = ({ name, label, value, onChange, getSuggestions, placeholder, required = false }) => {
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const [suggestions, setSuggestions] = useState([]);
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
+    const inputRef = useRef(null);
+    const suggestionsRef = useRef(null);
+
+    useEffect(() => {
+        if (value && value.length >= 2) {
+            const newSuggestions = getSuggestions(name, value);
+            setSuggestions(newSuggestions);
+            setShowSuggestions(newSuggestions.length > 0);
+        } else {
+            setSuggestions([]);
+            setShowSuggestions(false);
+        }
+        setHighlightedIndex(-1);
+    }, [value, name, getSuggestions]);
+
+    const handleInputChange = (e) => {
+        onChange(e);
+    };
+
+    const handleSuggestionClick = (suggestion) => {
+        onChange({ target: { name, value: suggestion } });
+        setShowSuggestions(false);
+        setHighlightedIndex(-1);
+    };
+
+    const handleKeyDown = (e) => {
+        if (!showSuggestions) return;
+
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                setHighlightedIndex(prev => 
+                    prev < suggestions.length - 1 ? prev + 1 : 0
+                );
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                setHighlightedIndex(prev => 
+                    prev > 0 ? prev - 1 : suggestions.length - 1
+                );
+                break;
+            case 'Enter':
+                e.preventDefault();
+                if (highlightedIndex >= 0) {
+                    handleSuggestionClick(suggestions[highlightedIndex]);
+                }
+                break;
+            case 'Escape':
+                setShowSuggestions(false);
+                setHighlightedIndex(-1);
+                break;
+        }
+    };
+
+    const handleBlur = (e) => {
+        // Delay hiding suggestions to allow click events
+        setTimeout(() => {
+            setShowSuggestions(false);
+            setHighlightedIndex(-1);
+        }, 200);
+    };
+
+    return (
+        <div className="relative">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+                {label} {required && <span className="text-red-500">*</span>}
+            </label>
+            <input
+                ref={inputRef}
+                type="text"
+                name={name}
+                value={value}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                onBlur={handleBlur}
+                onFocus={() => {
+                    if (suggestions.length > 0) {
+                        setShowSuggestions(true);
+                    }
+                }}
+                placeholder={placeholder}
+                required={required}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                autoComplete="off"
+            />
+            
+            {showSuggestions && suggestions.length > 0 && (
+                <div 
+                    ref={suggestionsRef}
+                    className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+                >
+                    {suggestions.map((suggestion, index) => (
+                        <div
+                            key={suggestion}
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            className={`px-3 py-2 cursor-pointer text-sm transition-colors ${
+                                index === highlightedIndex 
+                                    ? 'bg-blue-50 text-blue-900' 
+                                    : 'hover:bg-gray-50'
+                            }`}
+                        >
+                            <div className="flex items-center gap-2">
+                                <Clock size={14} className="text-gray-400" />
+                                <span>{suggestion}</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
 
 // --- Konfigurasi Supabase ---
 // Pastikan Anda membuat file .env dan mengisinya
@@ -162,6 +280,34 @@ export default function App() {
 
     // Cek konfigurasi environment variables dipindahkan ke JSX agar urutan hooks tetap konsisten
 
+    // --- Autocomplete Functionality ---
+    const getAutocompleteSuggestions = (fieldName, query) => {
+        if (!query || query.length < 2 || !arsipList) return [];
+        
+        const uniqueValues = new Set();
+        arsipList.forEach(arsip => {
+            const value = arsip[fieldName];
+            if (value && value.toLowerCase().includes(query.toLowerCase())) {
+                uniqueValues.add(value);
+            }
+        });
+        
+        return Array.from(uniqueValues)
+            .sort((a, b) => {
+                // Prioritize exact matches and starts-with matches
+                const aLower = a.toLowerCase();
+                const bLower = b.toLowerCase();
+                const queryLower = query.toLowerCase();
+                
+                if (aLower === queryLower) return -1;
+                if (bLower === queryLower) return 1;
+                if (aLower.startsWith(queryLower) && !bLower.startsWith(queryLower)) return -1;
+                if (bLower.startsWith(queryLower) && !aLower.startsWith(queryLower)) return 1;
+                return a.localeCompare(b);
+            })
+            .slice(0, 8); // Limit to 8 suggestions
+    };
+
     // --- Search Functionality ---
     const performSearch = async (query) => {
         if (!query.trim()) {
@@ -186,9 +332,10 @@ export default function App() {
                 return searchTerms.some(term => searchableText.includes(term));
             }).map(klasifikasi => ({ ...klasifikasi, type: 'klasifikasi' }));
 
-            const allResults = [...arsipResults, ...klasifikasiResults];
-            setSearchResults(allResults);
-            setShowSearchResults(true);
+            // Limit results for quick preview
+            const limitedResults = [...arsipResults.slice(0, 6), ...klasifikasiResults.slice(0, 3)];
+            setSearchResults(limitedResults);
+            setShowSearchResults(limitedResults.length > 0);
         } catch (error) {
             console.error('Search error:', error);
             toast.error('Terjadi kesalahan saat mencari');
@@ -381,8 +528,12 @@ export default function App() {
     };
 
     const handleSearchSubmit = (value) => {
-        setSearchQuery(value ?? '');
-        setCurrentView('cari');
+        // Set search term untuk advanced search dan switch ke arsip view
+        setSearchTerm(value ?? '');
+        setCurrentView('arsip');
+        // Clear global search
+        setSearchQuery('');
+        setShowSearchResults(false);
     };
 
     // Move useMemo outside of any conditional logic
@@ -1070,12 +1221,13 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                         </div>
                         
                         <div>
-                            <InputField 
+                            <AutocompleteInput 
                                 name="pengirim" 
                                 label="Pengirim / Asal Surat" 
                                 value={formData.pengirim} 
                                 onChange={handleChange}
-                                placeholder="Opsional"
+                                getSuggestions={getAutocompleteSuggestions}
+                                placeholder="Masukkan nama pengirim..."
                             />
                             {validationErrors.pengirim && (
                                 <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.pengirim}</p>
@@ -1083,12 +1235,13 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                         </div>
                         
                         <div>
-                            <InputField 
+                            <AutocompleteInput 
                                 name="tujuanSurat" 
                                 label="Tujuan Surat" 
                                 value={formData.tujuanSurat} 
                                 onChange={handleChange}
-                                placeholder="Opsional"
+                                getSuggestions={getAutocompleteSuggestions}
+                                placeholder="Opsional - masukkan tujuan surat"
                             />
                             {validationErrors.tujuanSurat && (
                                 <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.tujuanSurat}</p>
@@ -1096,13 +1249,14 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                         </div>
                         
                         <div className="md:col-span-2">
-                            <InputField 
+                            <AutocompleteInput 
                                 name="perihal" 
                                 label="Perihal / Isi Surat" 
                                 value={formData.perihal} 
-                                onChange={handleChange} 
-                                required 
-                                placeholder="Wajib diisi - ringkasan isi surat"
+                                onChange={handleChange}
+                                getSuggestions={getAutocompleteSuggestions}
+                                placeholder="Wajib diisi - ringkasan isi surat" 
+                                required
                             />
                             {validationErrors.perihal && (
                                 <p className="text-red-500 text-sm mt-1 animate-shake">{validationErrors.perihal}</p>
@@ -1595,13 +1749,25 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotificati
                 showNotification('Kode klasifikasi berhasil diperbarui!', 'success');
                 onFinish();
             } else {
+                // Check for duplicate kode before inserting
+                const existingKlasifikasi = klasifikasiList.find(k => k.kode === dataToSave.kode);
+                if (existingKlasifikasi) {
+                    showNotification(`Kode klasifikasi "${dataToSave.kode}" sudah ada. Gunakan kode yang berbeda.`, 'error');
+                    return;
+                }
+                
                 // Optimistic insert for new klasifikasi
                 tempId = addKlasifikasiOptimistic(dataToSave);
                 
                 const { data, error } = await supabase.from('klasifikasi').insert([dataToSave]).select().single();
                 if (error) {
                     rollbackKlasifikasiOptimistic(tempId);
-                    throw error;
+                    if (error.code === '23505') { // PostgreSQL unique constraint violation
+                        showNotification(`Kode klasifikasi "${dataToSave.kode}" sudah ada. Gunakan kode yang berbeda.`, 'error');
+                    } else {
+                        throw error;
+                    }
+                    return;
                 }
                 confirmKlasifikasiOptimistic(tempId, data);
                 showNotification('Kode klasifikasi berhasil ditambahkan!', 'success');
@@ -2130,11 +2296,11 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                 <table className="w-full">
                                     <thead>
                                         <tr className="bg-gradient-to-r from-slate-50 to-gray-50 border-b-2 border-indigo-100">
-                                            <th className="text-left py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide">Dokumen</th>
-                                            <th className="text-left py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide">Perihal</th>
-                                            <th className="text-left py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide w-32">Tanggal</th>
-                                            <th className="text-left py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide w-40">Klasifikasi</th>
-                                            <th className="text-center py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide w-32">Aksi</th>
+                                            <th className="text-left py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide w-56">Nomor & Status</th>
+                                            <th className="text-left py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide">Perihal & Tujuan</th>
+                                            <th className="text-left py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide w-40">Tanggal Surat</th>
+                                            <th className="text-left py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide w-36">Klasifikasi</th>
+                                            <th className="text-center py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide w-40">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -2150,7 +2316,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                 const fileUrl = arsip.filePath ? `${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}` : null;
 
                                             return (
-                                                <tr key={arsip.id} className="group border-b border-gray-100 hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-200 cursor-pointer" onClick={() => setSelectedArsipDetail(arsip)}>
+                                                <tr key={arsip.id} className="border-b border-gray-100 hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-200 cursor-pointer" onClick={() => setSelectedArsipDetail(arsip)}>
                                                     <td className="py-6 px-6">
                                                         <div className="flex items-center gap-3">
                                                             <div className="flex-shrink-0">
@@ -2168,16 +2334,16 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                                 <div className="font-mono text-sm font-bold text-gray-900 mb-1">{arsip.nomorSurat}</div>
                                                             <div className="flex items-center gap-2">
                                                                     {arsip.googleDriveLink || arsip.filePath ? (
-                                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                                                                            <CheckCircle size={10} className="mr-1" />
-                                                                            Tersedia
-                                                                    </span>
+                                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                                                            <FileText size={10} className="mr-1" />
+                                                                            Digital
+                                                                        </span>
                                                                     ) : (
-                                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                                                            <XCircle size={10} className="mr-1" />
-                                                                            Tidak Ada File
-                                                                    </span>
-                                                                )}
+                                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                                                            <Archive size={10} className="mr-1" />
+                                                                            Fisik
+                                                                        </span>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -2203,29 +2369,29 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                         <div className="flex items-center gap-3">
                                                             {arsip.kodeKlasifikasi ? (
                                                                 <div className="group relative">
-                                                                    <div className="flex items-center bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-2 rounded-xl border border-indigo-200 shadow-sm hover:shadow-md transition-all duration-200">
+                                                                    <div className="flex items-center bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-2 rounded-xl border border-indigo-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer">
                                                                         <span className="text-sm font-mono font-bold text-indigo-700">
                                                                             {arsip.kodeKlasifikasi}
-                                                                </span>
+                                                                        </span>
                                                                         <Info size={14} className="ml-2 text-indigo-500 opacity-60 group-hover:opacity-100 transition-opacity" />
-                                                        </div>
+                                                                    </div>
                                                                     <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-20">
                                                                         <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 max-w-xs shadow-xl">
                                                                             <div className="font-semibold mb-1">Klasifikasi:</div>
                                                                             <div className="text-gray-200">
                                                                                 {getKlasifikasiDesc(arsip.kodeKlasifikasi)}
-                                                                </div>
+                                                                            </div>
                                                                             <div className="absolute top-full left-1/2 transform -translate-x-1/2">
                                                                                 <div className="border-4 border-transparent border-t-gray-900"></div>
-                                                                    </div>
+                                                                            </div>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
                                                             ) : (
                                                                 <span className="text-gray-400 text-sm">Tidak ada</span>
-                                            )}
-                                        </div>
-                                    </td>
+                                                            )}
+                                                        </div>
+                                                    </td>
                                                     <td className="py-6 px-6" onClick={(e) => e.stopPropagation()}>
                                                         <div className="flex items-center justify-center gap-2">
                                                             {/* View Action */}
@@ -2333,16 +2499,16 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                         <div className="font-mono text-sm font-bold text-gray-900 mb-1">{arsip.nomorSurat}</div>
                                                 <div className="flex items-center gap-2">
                                                             {arsip.googleDriveLink || arsip.filePath ? (
-                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                                                                    <CheckCircle size={10} className="mr-1" />
-                                                                    Tersedia
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                                                    <FileText size={10} className="mr-1" />
+                                                                    Digital
                                                                 </span>
                                                             ) : (
-                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                                                                    <XCircle size={10} className="mr-1" />
-                                                                    Tidak Ada File
-                                                        </span>
-                                                    )}
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                                                                    <Archive size={10} className="mr-1" />
+                                                                    Fisik
+                                                                </span>
+                                                            )}
                                                 </div>
                                                     </div>
                                                 </div>
