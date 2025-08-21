@@ -1758,10 +1758,12 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
         if (!arsipList) return [];
         
         let filtered = arsipList.filter(arsip => {
-            // Search filter
+            // Search filter with null checks
             const searchMatch = !searchTerm || 
-                arsip.perihal.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                arsip.nomorSurat.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (arsip.perihal && arsip.perihal.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (arsip.nomorSurat && arsip.nomorSurat.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (arsip.tujuanSurat && arsip.tujuanSurat.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (arsip.pengirim && arsip.pengirim.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 getKlasifikasiDesc(arsip.kodeKlasifikasi).toLowerCase().includes(searchTerm.toLowerCase());
             
             // Date range filter
@@ -1790,12 +1792,12 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
             
             switch (sortBy) {
                 case 'perihal':
-                    aValue = a.perihal.toLowerCase();
-                    bValue = b.perihal.toLowerCase();
+                    aValue = (a.perihal || '').toLowerCase();
+                    bValue = (b.perihal || '').toLowerCase();
                     break;
                 case 'nomorSurat':
-                    aValue = a.nomorSurat.toLowerCase();
-                    bValue = b.nomorSurat.toLowerCase();
+                    aValue = (a.nomorSurat || '').toLowerCase();
+                    bValue = (b.nomorSurat || '').toLowerCase();
                     break;
                 case 'tanggalSurat':
                     aValue = new Date(a.tanggalSurat);
@@ -1905,243 +1907,141 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                     </div>
                 </div>
                 
-                {/* Advanced Search System - Enhanced UI/UX */}
-                <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-xl border border-indigo-100 p-6 mb-6">
-                    {/* Search Header */}
-                    <div className="mb-6">
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                                    Pencarian Arsip
-                                </h2>
-                                <p className="text-sm text-gray-600 mt-1">
-                                    Temukan dokumen dengan cepat menggunakan filter advanced
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                {/* Search Stats */}
-                                <div className="bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                        <span className="text-sm font-medium text-gray-700">
-                                            {filteredAndSortedData.length} hasil ditemukan
-                                        </span>
-                                    </div>
-                                </div>
-                                {/* View Mode Toggle */}
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-1 flex">
-                                    <button
-                                        onClick={() => setViewMode('table')}
-                                        className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
-                                            viewMode === 'table' 
-                                                ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg' 
-                                                : 'text-gray-600 hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                        </svg>
-                                        <span className="text-sm font-medium">Tabel</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setViewMode('grid')}
-                                        className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
-                                            viewMode === 'grid' 
-                                                ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg' 
-                                                : 'text-gray-600 hover:bg-gray-50'
-                                        }`}
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                                        </svg>
-                                        <span className="text-sm font-medium">Grid</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Main Search Bar */}
-                        <div className="relative group">
-                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity duration-300"></div>
-                            <div className="relative bg-white rounded-2xl border-2 border-transparent hover:border-indigo-200 transition-all duration-300 shadow-lg">
-                                <div className="flex items-center">
-                                    <div className="pl-6">
-                                        <Search className="text-indigo-500" size={24} />
-                                    </div>
-                            <input
-                                type="text"
-                                        placeholder="Ketik untuk mencari dokumen... (nomor surat, perihal, pengirim, tujuan)"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full px-4 py-4 text-lg bg-transparent outline-none placeholder-gray-400"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                // Trigger search automatically
-                                            }
-                                        }}
-                                    />
-                                    {searchTerm && (
-                                        <button
-                                            onClick={() => setSearchTerm('')}
-                                            className="pr-4 text-gray-400 hover:text-gray-600 transition-colors"
-                                        >
-                                            <XCircle size={20} />
-                                        </button>
-                                    )}
-                                    <button className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-6 py-3 rounded-r-2xl hover:from-indigo-600 hover:to-purple-600 transition-all duration-200 flex items-center gap-2 shadow-lg">
-                                        <Search size={18} />
-                                        <span className="font-medium">Cari</span>
-                                    </button>
-                                </div>
-                        </div>
-                    </div>
-                    
-                        {/* Quick Search Tags */}
-                        <div className="mt-4 flex items-center gap-2 flex-wrap">
-                            <span className="text-sm text-gray-600">Pencarian cepat:</span>
-                            {['Surat Masuk', 'Surat Keluar', 'Memo', 'Pengumuman', 'Undangan'].map(tag => (
-                                <button
-                                    key={tag}
-                                    onClick={() => setSearchTerm(tag)}
-                                    className="px-3 py-1 bg-white border border-gray-200 rounded-full text-sm text-gray-700 hover:bg-indigo-50 hover:border-indigo-300 hover:text-indigo-700 transition-all duration-200"
-                                >
-                                    {tag}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    
-                    {/* Advanced Filters */}
+                                {/* Search and Filters - Clean & Simple */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
                     <div className="space-y-4">
-                        {/* Filter Toggle */}
-                        <button
-                            onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
-                            className="w-full flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-gray-200 hover:border-indigo-300 transition-all duration-200 group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors">
-                                    <Filter className="text-indigo-600" size={18} />
-                    </div>
-                                <span className="font-medium text-gray-700">Filter Lanjutan</span>
+                        {/* Search Bar with Stats */}
+                        <div className="flex items-center gap-4">
+                            <div className="flex-1 relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="Cari dokumen... (nomor surat, perihal, pengirim, tujuan)"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                                />
+                                {searchTerm && (
+                                    <button
+                                        onClick={() => setSearchTerm('')}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    >
+                                        <XCircle size={16} />
+                                    </button>
+                                )}
                             </div>
-                            <ChevronRight className={`text-gray-400 transition-transform duration-200 ${showAdvancedSearch ? 'rotate-90' : ''}`} size={20} />
-                        </button>
+                            
+                            {/* Filter Toggle */}
+                            <button
+                                onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                                className={`px-4 py-2.5 rounded-lg border transition-all duration-200 flex items-center gap-2 ${
+                                    showAdvancedSearch 
+                                        ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                                        : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+                                }`}
+                            >
+                                <Filter size={16} />
+                                <span className="font-medium">Filter</span>
+                                {showAdvancedSearch && (
+                                    <span className="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded-full">
+                                        {(filterStatus !== 'semua' ? 1 : 0) + 
+                                         (filterKlasifikasi !== 'semua' ? 1 : 0) +
+                                         (startDate ? 1 : 0) +
+                                         (endDate ? 1 : 0)}
+                                    </span>
+                                )}
+                            </button>
+                            
+                            {/* View Mode */}
+                            <div className="flex items-center border border-gray-200 rounded-lg">
+                                <button
+                                    onClick={() => setViewMode('table')}
+                                    className={`px-3 py-2 transition-all duration-200 ${
+                                        viewMode === 'table' 
+                                            ? 'bg-gray-100 text-gray-900' 
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                    title="Tampilan Tabel"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
+                                <div className="w-px h-6 bg-gray-200"></div>
+                                <button
+                                    onClick={() => setViewMode('grid')}
+                                    className={`px-3 py-2 transition-all duration-200 ${
+                                        viewMode === 'grid' 
+                                            ? 'bg-gray-100 text-gray-900' 
+                                            : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                                    title="Tampilan Grid"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                                    </svg>
+                                </button>
+                            </div>
+                            
+                            {/* Result Count */}
+                            <div className="text-sm text-gray-600">
+                                <span className="font-medium">{filteredAndSortedData.length}</span> hasil
+                            </div>
+                        </div>
 
-                        {/* Expandable Filter Section */}
+                                                {/* Expandable Filter Section - Simple & Clean */}
                         {showAdvancedSearch && (
-                            <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-6 animate-slideDown">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {/* Date Range Filter */}
-                                    <div className="space-y-3">
-                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                            <Calendar size={16} className="text-indigo-500" />
-                                            Rentang Tanggal Surat
+                            <div className="border-t border-gray-200 pt-4 space-y-4 animate-slideDown">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {/* Date Range */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Rentang Tanggal
                                         </label>
                                         <div className="grid grid-cols-2 gap-2">
                                             <input
                                                 type="date"
                                                 value={startDate}
                                                 onChange={(e) => setStartDate(e.target.value)}
-                                                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
-                                                placeholder="Dari"
+                                                className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             />
                                             <input
                                                 type="date"
                                                 value={endDate}
                                                 onChange={(e) => setEndDate(e.target.value)}
-                                                className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
-                                                placeholder="Sampai"
+                                                className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             />
                                         </div>
                                     </div>
 
-                                    {/* Classification Filter */}
-                                    <div className="space-y-3">
-                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                            <FolderKanban size={16} className="text-indigo-500" />
-                                            Klasifikasi Dokumen
+                                    {/* Classification */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Klasifikasi
                                         </label>
-                        <select
-                            value={filterKlasifikasi}
-                            onChange={(e) => setFilterKlasifikasi(e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
-                        >
-                            <option value="semua">Semua Klasifikasi</option>
-                            {uniqueKlasifikasi.map(k => (
-                                <option key={k.kode} value={k.kode}>
-                                    {k.kode} - {k.deskripsi}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    
-                                    {/* Sort Options */}
-                                    <div className="space-y-3">
-                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                            <Layers size={16} className="text-indigo-500" />
-                                            Urutkan Berdasarkan
-                                        </label>
-                                        <div className="flex gap-2">
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                                                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
-                        >
-                            <option value="tanggalSurat">Tanggal Surat</option>
-                            <option value="perihal">Perihal</option>
-                            <option value="nomorSurat">Nomor Surat</option>
-                                                <option value="createdAt">Tanggal Input</option>
-                        </select>
-                        <button
-                            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                                                className={`px-3 py-2 border rounded-lg transition-all duration-200 ${
-                                                    sortOrder === 'desc' 
-                                                        ? 'bg-indigo-50 border-indigo-300 text-indigo-700' 
-                                                        : 'border-gray-200 hover:bg-gray-50'
-                                                }`}
-                            title={`Urutkan ${sortOrder === 'asc' ? 'Menurun' : 'Menaik'}`}
-                        >
-                                                {sortOrder === 'asc' ? (
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                                                    </svg>
-                                                ) : (
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
-                                                    </svg>
-                                                )}
-                        </button>
-                                        </div>
+                                        <select
+                                            value={filterKlasifikasi}
+                                            onChange={(e) => setFilterKlasifikasi(e.target.value)}
+                                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
+                                            <option value="semua">Semua Klasifikasi</option>
+                                            {uniqueKlasifikasi.map(k => (
+                                                <option key={k.kode} value={k.kode}>
+                                                    {k.kode} - {k.deskripsi}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
 
-                                    {/* Document Type Filter */}
-                                    <div className="space-y-3">
-                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                            <FileText size={16} className="text-indigo-500" />
-                                            Tipe Dokumen
-                                        </label>
-                                        <div className="flex flex-wrap gap-2">
-                                            <label className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-all cursor-pointer">
-                                                <input type="checkbox" className="text-indigo-600 rounded focus:ring-indigo-500" />
-                                                <span className="text-sm">Dengan File</span>
-                                            </label>
-                                            <label className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-all cursor-pointer">
-                                                <input type="checkbox" className="text-indigo-600 rounded focus:ring-indigo-500" />
-                                                <span className="text-sm">Tanpa File</span>
-                                            </label>
-                                        </div>
-                                    </div>
-
-                                    {/* Status Filter */}
-                                    <div className="space-y-3">
-                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                            <Clock size={16} className="text-indigo-500" />
-                                            Status Retensi
+                                    {/* Status */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Status
                                         </label>
                                         <select
                                             value={filterStatus}
                                             onChange={(e) => setFilterStatus(e.target.value)}
-                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
+                                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         >
                                             <option value="semua">Semua Status</option>
                                             <option value="aktif">Aktif</option>
@@ -2149,23 +2049,35 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                         </select>
                                     </div>
 
-                                    {/* Additional Filters */}
-                                    <div className="space-y-3">
-                                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                                            <User size={16} className="text-indigo-500" />
-                                            Pengirim/Tujuan
+                                    {/* Sort */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Urutkan
                                         </label>
-                                        <input
-                                            type="text"
-                                            placeholder="Filter berdasarkan pengirim atau tujuan"
-                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-sm transition-all"
-                                        />
+                                        <div className="flex gap-2">
+                                            <select
+                                                value={sortBy}
+                                                onChange={(e) => setSortBy(e.target.value)}
+                                                className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            >
+                                                <option value="tanggalSurat">Tanggal Surat</option>
+                                                <option value="perihal">Perihal</option>
+                                                <option value="nomorSurat">Nomor Surat</option>
+                                            </select>
+                                            <button
+                                                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                                                className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                                                title={`Urutkan ${sortOrder === 'asc' ? 'Menurun' : 'Menaik'}`}
+                                            >
+                                                {sortOrder === 'asc' ? '↑' : '↓'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Action Buttons */}
-                                <div className="flex items-center justify-between pt-6 border-t border-gray-100">
-                        <button
+                                {/* Reset Button */}
+                                <div className="flex justify-end">
+                                    <button
                                         onClick={() => {
                                             setSearchTerm('');
                                             setFilterStatus('semua');
@@ -2175,23 +2087,10 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                             setSortBy('tanggalSurat');
                                             setSortOrder('desc');
                                         }}
-                                        className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors duration-200 flex items-center gap-2"
+                                        className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
                                     >
-                                        <XCircle size={16} />
-                                        Reset Semua Filter
+                                        Reset Filter
                                     </button>
-                                    <div className="flex gap-3">
-                                        <button 
-                                            onClick={() => setShowAdvancedSearch(false)}
-                                            className="px-6 py-2 border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200"
-                                        >
-                                            Tutup
-                                        </button>
-                                        <button className="px-6 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-all duration-200 flex items-center gap-2 shadow-lg">
-                                            <Search size={16} />
-                                            Terapkan Filter
-                        </button>
-                                    </div>
                                 </div>
                             </div>
                         )}
