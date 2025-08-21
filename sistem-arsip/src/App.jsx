@@ -688,7 +688,7 @@ export default function App() {
         const props = { supabase, klasifikasiList, setEditingArsip, editingKlasifikasi, setEditingKlasifikasi, navigate, arsipList, activeArchives, inactiveArchives, showNotification, setDeleteConfirmModal, setSelectedArsipDetail };
         switch (currentView) {
             case 'tambah':
-                return <ArsipForm {...props} arsipToEdit={editingArsip} onFinish={() => navigate('dashboard')} />;
+                return <ArsipForm {...props} arsipToEdit={editingArsip} arsipList={arsipList} onFinish={() => navigate('dashboard')} />;
             case 'klasifikasi':
                 return <KlasifikasiManager {...props} openModal={() => setShowKlasifikasiModal(true)} />;
             case 'semua':
@@ -885,7 +885,7 @@ const DeleteConfirmModal = ({ message, onConfirm, onCancel }) => {
     );
 };
 
-const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotification }) => {
+const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotification, arsipList }) => {
     const {
         addArsipOptimistic,
         confirmArsipOptimistic,
@@ -918,6 +918,33 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
     const [uploadProgress, setUploadProgress] = useState(0);
     const [currentStep, setCurrentStep] = useState(1);
     const [validationErrors, setValidationErrors] = useState({});
+    
+    // Autocomplete function for this form
+    const getAutocompleteSuggestions = useCallback((fieldName, query) => {
+        if (!query || query.length < 2 || !arsipList) return [];
+        
+        const uniqueValues = new Set();
+        arsipList.forEach(arsip => {
+            const value = arsip[fieldName];
+            if (value && value.toLowerCase().includes(query.toLowerCase())) {
+                uniqueValues.add(value);
+            }
+        });
+        
+        return Array.from(uniqueValues)
+            .sort((a, b) => {
+                const aLower = a.toLowerCase();
+                const bLower = b.toLowerCase();
+                const queryLower = query.toLowerCase();
+                
+                if (aLower === queryLower) return -1;
+                if (bLower === queryLower) return 1;
+                if (aLower.startsWith(queryLower) && !bLower.startsWith(queryLower)) return -1;
+                if (bLower.startsWith(queryLower) && !aLower.startsWith(queryLower)) return 1;
+                return a.localeCompare(b);
+            })
+            .slice(0, 8);
+    }, [arsipList]);
 
     useEffect(() => {
         if (arsipToEdit) {
@@ -1338,9 +1365,9 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                                 name="perihal" 
                                 label="Perihal / Isi Surat" 
                                 value={formData.perihal} 
-                                onChange={handleChange}
+                                onChange={handleChange} 
                                 getSuggestions={getAutocompleteSuggestions}
-                                placeholder="Wajib diisi - ringkasan isi surat" 
+                                placeholder="Wajib diisi - ringkasan isi surat"
                                 required
                             />
                             {validationErrors.perihal && (
@@ -1850,7 +1877,7 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotificati
                     if (error.code === '23505') { // PostgreSQL unique constraint violation
                         showNotification(`Kode klasifikasi "${dataToSave.kode}" sudah ada. Gunakan kode yang berbeda.`, 'error');
                     } else {
-                        throw error;
+                    throw error;
                     }
                     return;
                 }
@@ -2165,11 +2192,11 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                         <div className="flex items-center gap-4">
                             <div className="flex-1 relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                                <input
-                                    type="text"
+                            <input
+                                type="text"
                                     placeholder="Cari dokumen... (nomor surat, perihal, pengirim, tujuan)"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                                     className="w-full pl-10 pr-10 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                                 />
                                 {searchTerm && (
@@ -2180,11 +2207,11 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                         <XCircle size={16} />
                                     </button>
                                 )}
-                            </div>
-                            
+                    </div>
+                    
                             {/* Filter Toggle */}
                             <button
-                                onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
+                            onClick={() => setShowAdvancedSearch(!showAdvancedSearch)}
                                 className={`px-4 py-2.5 rounded-lg border transition-all duration-200 flex items-center gap-2 ${
                                     showAdvancedSearch 
                                         ? 'bg-blue-50 border-blue-200 text-blue-700' 
@@ -2232,8 +2259,8 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                                     </svg>
                                 </button>
-                            </div>
-                            
+                    </div>
+                    
                             {/* Result Count */}
                             <div className="text-sm text-gray-600">
                                 <span className="font-medium">{filteredAndSortedData.length}</span> hasil
@@ -2245,7 +2272,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                             <div className="border-t border-gray-200 pt-4 space-y-4 animate-slideDown">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {/* Date Range */}
-                                    <div>
+                    <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Rentang Tanggal
                                         </label>
@@ -2263,29 +2290,29 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                 className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                             />
                                         </div>
-                                    </div>
-
+                    </div>
+                    
                                     {/* Classification */}
-                                    <div>
+                    <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Klasifikasi
                                         </label>
-                                        <select
-                                            value={filterKlasifikasi}
-                                            onChange={(e) => setFilterKlasifikasi(e.target.value)}
+                        <select
+                            value={filterKlasifikasi}
+                            onChange={(e) => setFilterKlasifikasi(e.target.value)}
                                             className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        >
-                                            <option value="semua">Semua Klasifikasi</option>
-                                            {uniqueKlasifikasi.map(k => (
-                                                <option key={k.kode} value={k.kode}>
-                                                    {k.kode} - {k.deskripsi}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
+                        >
+                            <option value="semua">Semua Klasifikasi</option>
+                            {uniqueKlasifikasi.map(k => (
+                                <option key={k.kode} value={k.kode}>
+                                    {k.kode} - {k.deskripsi}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    
                                     {/* Status */}
-                                    <div>
+                    <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">
                                             Status
                                         </label>
@@ -2306,29 +2333,29 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                             Urutkan
                                         </label>
                                         <div className="flex gap-2">
-                                            <select
-                                                value={sortBy}
-                                                onChange={(e) => setSortBy(e.target.value)}
+                        <select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value)}
                                                 className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            >
-                                                <option value="tanggalSurat">Tanggal Surat</option>
-                                                <option value="perihal">Perihal</option>
-                                                <option value="nomorSurat">Nomor Surat</option>
-                                            </select>
-                                            <button
-                                                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                        >
+                            <option value="tanggalSurat">Tanggal Surat</option>
+                            <option value="perihal">Perihal</option>
+                            <option value="nomorSurat">Nomor Surat</option>
+                        </select>
+                        <button
+                            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
                                                 className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                                                title={`Urutkan ${sortOrder === 'asc' ? 'Menurun' : 'Menaik'}`}
-                                            >
-                                                {sortOrder === 'asc' ? '↑' : '↓'}
-                                            </button>
+                            title={`Urutkan ${sortOrder === 'asc' ? 'Menurun' : 'Menaik'}`}
+                        >
+                            {sortOrder === 'asc' ? '↑' : '↓'}
+                        </button>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Reset Button */}
                                 <div className="flex justify-end">
-                                    <button
+                        <button
                                         onClick={() => {
                                             setSearchTerm('');
                                             setFilterStatus('semua');
@@ -2341,7 +2368,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                         className="text-sm text-gray-600 hover:text-gray-800 transition-colors"
                                     >
                                         Reset Filter
-                                    </button>
+                        </button>
                                 </div>
                             </div>
                         )}
@@ -2420,15 +2447,15 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                             <div className="flex items-center gap-2">
                                                                     {arsip.googleDriveLink || arsip.filePath ? (
                                                                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                                                                            <FileText size={10} className="mr-1" />
+                                                                        <FileText size={10} className="mr-1" />
                                                                             Digital
-                                                                        </span>
+                                                                    </span>
                                                                     ) : (
                                                                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
                                                                             <Archive size={10} className="mr-1" />
                                                                             Fisik
-                                                                        </span>
-                                                                    )}
+                                                                    </span>
+                                                                )}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -2457,26 +2484,26 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                                     <div className="flex items-center bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-2 rounded-xl border border-indigo-200 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer">
                                                                         <span className="text-sm font-mono font-bold text-indigo-700">
                                                                             {arsip.kodeKlasifikasi}
-                                                                        </span>
+                                                                </span>
                                                                         <Info size={14} className="ml-2 text-indigo-500 opacity-60 group-hover:opacity-100 transition-opacity" />
-                                                                    </div>
+                                                        </div>
                                                                     <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-20">
                                                                         <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 max-w-xs shadow-xl">
                                                                             <div className="font-semibold mb-1">Klasifikasi:</div>
                                                                             <div className="text-gray-200">
                                                                                 {getKlasifikasiDesc(arsip.kodeKlasifikasi)}
-                                                                            </div>
+                                                                </div>
                                                                             <div className="absolute top-full left-1/2 transform -translate-x-1/2">
                                                                                 <div className="border-4 border-transparent border-t-gray-900"></div>
-                                                                            </div>
-                                                                        </div>
+                                                                    </div>
                                                                     </div>
                                                                 </div>
+                                                            </div>
                                                             ) : (
                                                                 <span className="text-gray-400 text-sm">Tidak ada</span>
-                                                            )}
-                                                        </div>
-                                                    </td>
+                                            )}
+                                        </div>
+                                    </td>
                                                     <td className="py-6 px-6" onClick={(e) => e.stopPropagation()}>
                                                         <div className="flex items-center justify-center gap-2">
                                                             {/* View Action */}
@@ -2592,8 +2619,8 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
                                                                     <Archive size={10} className="mr-1" />
                                                                     Fisik
-                                                                </span>
-                                                            )}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                     </div>
                                                 </div>
