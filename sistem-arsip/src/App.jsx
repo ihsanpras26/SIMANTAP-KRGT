@@ -2603,7 +2603,7 @@ const NavItem = ({ icon, label, active, onClick }) => (
 
 const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ...props }) => {
     const [activeTab, setActiveTab] = useState('aktif');
-    const { navigate, setEditingArsip } = props;
+    const { navigate, setEditingArsip, setSelectedArsipDetail } = props;
     const { isItemLoading } = useAppStore();
 
     // Show skeleton if data is still loading
