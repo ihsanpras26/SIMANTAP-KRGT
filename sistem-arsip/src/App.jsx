@@ -128,6 +128,9 @@ export default function App() {
     
     // Advanced search state
     const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+    
+    // Detail arsip modal state
+    const [selectedArsipDetail, setSelectedArsipDetail] = useState(null);
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
@@ -466,7 +469,7 @@ export default function App() {
             case 'klasifikasi':
                 return <KlasifikasiManager {...props} openModal={() => setShowKlasifikasiModal(true)} />;
             case 'semua':
-                 return <ArsipList {...props} title="Semua Arsip" arsipList={arsipList} setEditingArsip={(a) => { setEditingArsip(a); navigate('tambah'); }} listType="semua" />;
+                 return <ArsipList {...props} title="Semua Arsip" arsipList={arsipList} setEditingArsip={(a) => { setEditingArsip(a); navigate('tambah'); }} setSelectedArsipDetail={setSelectedArsipDetail} listType="semua" />;
             case 'laporan':
                  return <ReportingView {...props} />;
             default:
@@ -577,6 +580,13 @@ export default function App() {
             <AnimatePresence>
                 {showInfoModal && (
                     <InfoModal onClose={() => setShowInfoModal(false)} />
+                )}
+                {selectedArsipDetail && (
+                    <ArsipDetailModal 
+                        arsip={selectedArsipDetail} 
+                        klasifikasiList={klasifikasiList}
+                        onClose={() => setSelectedArsipDetail(null)} 
+                    />
                 )}
                 {deleteConfirmModal.show && (
                     <DeleteConfirmModal 
@@ -1609,7 +1619,7 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotificati
 };
 
 
-const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabase, listType, setDeleteConfirmModal }) => {
+const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabase, listType, setDeleteConfirmModal, setSelectedArsipDetail }) => {
     const { isItemLoading, deleteArsipOptimistic, confirmArsipDelete, rollbackArsipDelete } = useAppStore();
     const [expandedKlasifikasi, setExpandedKlasifikasi] = useState({});
     const [searchTerm, setSearchTerm] = useState('');
@@ -2139,7 +2149,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                                 </button>
                                                             )}
                                                             <button 
-                                                                onClick={() => alert('Detail arsip: ' + JSON.stringify(arsip, null, 2))} 
+                                                                onClick={() => setSelectedArsipDetail(arsip)} 
                                                                 className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200" 
                                                                 title="Detail Arsip"
                                                             >
@@ -2222,7 +2232,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                         </button>
                                                     )}
                                                     <button 
-                                                        onClick={() => alert('Detail arsip: ' + JSON.stringify(arsip, null, 2))} 
+                                                        onClick={() => setSelectedArsipDetail(arsip)} 
                                                         className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors duration-200" 
                                                         title="Detail Arsip"
                                                     >
@@ -2317,6 +2327,250 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
 const ReportingView = ({ arsipList, klasifikasiList }) => {
     // Logika komponen ini tidak perlu diubah karena hanya memproses data yang sudah ada di client
     return <div className="text-center p-8 bg-white rounded-xl shadow-md border border-gray-200">Fitur Laporan dalam pengembangan untuk versi Supabase.</div>;
+};
+
+const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
+    if (!arsip) return null;
+
+    const klasifikasi = klasifikasiList?.find(k => k.kode === arsip.kodeKlasifikasi);
+    const isActive = new Date(arsip.tanggalRetensi) > new Date();
+    const formatDate = (dateString) => {
+        if (!dateString) return '-';
+        return new Date(dateString).toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    };
+
+    const formatDateTime = (dateString) => {
+        if (!dateString) return '-';
+        return new Date(dateString).toLocaleString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fadeIn">
+            <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border border-gray-100 animate-slideUp">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 text-white relative">
+                    <button 
+                        onClick={onClose} 
+                        className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors duration-200 p-1 rounded-full hover:bg-white/10"
+                    >
+                        <XCircle size={24} />
+                    </button>
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/20 rounded-lg">
+                            <FileText size={24} />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold">Detail Arsip</h2>
+                            <p className="text-blue-100 text-sm">Informasi lengkap dokumen arsip</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Main Information */}
+                        <div className="lg:col-span-2 space-y-6">
+                            {/* Document Info */}
+                            <div className="bg-gray-50 rounded-lg p-5">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                    <FileText size={20} className="text-blue-600" />
+                                    Informasi Dokumen
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-600">Nomor Surat</label>
+                                        <p className="text-gray-900 font-medium mt-1">{arsip.nomorSurat || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-600">Tanggal Surat</label>
+                                        <p className="text-gray-900 font-medium mt-1">{formatDate(arsip.tanggalSurat)}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-600">Pengirim</label>
+                                        <p className="text-gray-900 font-medium mt-1">{arsip.pengirim || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-600">Tujuan Surat</label>
+                                        <p className="text-gray-900 font-medium mt-1">{arsip.tujuanSurat || '-'}</p>
+                                    </div>
+                                </div>
+                                <div className="mt-4">
+                                    <label className="text-sm font-medium text-gray-600">Perihal</label>
+                                    <p className="text-gray-900 font-medium mt-1 leading-relaxed">{arsip.perihal || '-'}</p>
+                                </div>
+                            </div>
+
+                            {/* Classification Info */}
+                            <div className="bg-gray-50 rounded-lg p-5">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                    <FolderKanban size={20} className="text-indigo-600" />
+                                    Klasifikasi
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-600">Kode Klasifikasi</label>
+                                        <p className="text-gray-900 font-medium mt-1">{arsip.kodeKlasifikasi || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-600">Nama Klasifikasi</label>
+                                        <p className="text-gray-900 font-medium mt-1">{klasifikasi?.nama || '-'}</p>
+                                    </div>
+                                </div>
+                                {klasifikasi?.deskripsi && (
+                                    <div className="mt-4">
+                                        <label className="text-sm font-medium text-gray-600">Deskripsi Klasifikasi</label>
+                                        <p className="text-gray-700 mt-1 text-sm leading-relaxed">{klasifikasi.deskripsi}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* File Access */}
+                            {(arsip.googleDriveLink || arsip.filePath) && (
+                                <div className="bg-gray-50 rounded-lg p-5">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                        <Eye size={20} className="text-green-600" />
+                                        Akses Dokumen
+                                    </h3>
+                                    <div className="flex flex-wrap gap-3">
+                                        {arsip.googleDriveLink && (
+                                            <button
+                                                onClick={() => window.open(arsip.googleDriveLink, '_blank')}
+                                                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                                            >
+                                                <Eye size={16} />
+                                                Lihat di Google Drive
+                                            </button>
+                                        )}
+                                        {arsip.filePath && !arsip.googleDriveLink && (
+                                            <button
+                                                onClick={() => window.open(`${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`, '_blank')}
+                                                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+                                            >
+                                                <Eye size={16} />
+                                                Lihat File
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Sidebar Info */}
+                        <div className="space-y-6">
+                            {/* Status */}
+                            <div className="bg-white border border-gray-200 rounded-lg p-5">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                    <CheckCircle size={20} className="text-emerald-600" />
+                                    Status
+                                </h3>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-600">Status Arsip</span>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                            isActive 
+                                                ? 'bg-green-100 text-green-800' 
+                                                : 'bg-red-100 text-red-800'
+                                        }`}>
+                                            {isActive ? (
+                                                <><CheckCircle size={10} /> Aktif</>
+                                            ) : (
+                                                <><AlertCircle size={10} /> Inaktif</>
+                                            )}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-600">Dokumen</span>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                                            arsip.googleDriveLink || arsip.filePath
+                                                ? 'bg-blue-100 text-blue-800'
+                                                : 'bg-gray-100 text-gray-800'
+                                        }`}>
+                                            {arsip.googleDriveLink ? (
+                                                <><Eye size={10} /> Online</>
+                                            ) : arsip.filePath ? (
+                                                <><FileText size={10} /> File</>
+                                            ) : (
+                                                <><AlertCircle size={10} /> Tidak Ada</>
+                                            )}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Dates */}
+                            <div className="bg-white border border-gray-200 rounded-lg p-5">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                    <Calendar size={20} className="text-purple-600" />
+                                    Tanggal Penting
+                                </h3>
+                                <div className="space-y-3">
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-600">Tanggal Retensi</label>
+                                        <p className="text-gray-900 font-medium mt-1 text-sm">{formatDate(arsip.tanggalRetensi)}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-600">Dibuat</label>
+                                        <p className="text-gray-700 mt-1 text-sm">{formatDateTime(arsip.createdAt)}</p>
+                                    </div>
+                                    {arsip.updatedAt && arsip.updatedAt !== arsip.createdAt && (
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-600">Diperbarui</label>
+                                            <p className="text-gray-700 mt-1 text-sm">{formatDateTime(arsip.updatedAt)}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Metadata */}
+                            <div className="bg-white border border-gray-200 rounded-lg p-5">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                    <Info size={20} className="text-gray-600" />
+                                    Metadata
+                                </h3>
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">ID Arsip</span>
+                                        <span className="text-gray-900 font-mono text-xs">{arsip.id}</span>
+                                    </div>
+                                    {arsip.filePath && (
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-600">File Path</span>
+                                            <span className="text-gray-900 font-mono text-xs truncate max-w-32" title={arsip.filePath}>
+                                                {arsip.filePath}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                    <div className="flex justify-end gap-3">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                        >
+                            Tutup
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 };
 
 const InfoModal = ({ onClose }) => {
@@ -2570,6 +2824,7 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
                                         title="Daftar Arsip Aktif" 
                                         arsipList={activeArchives} 
                                         setEditingArsip={(a) => { setEditingArsip(a); navigate('tambah'); }} 
+                                        setSelectedArsipDetail={setSelectedArsipDetail} 
                                         listType="aktif" 
                                     />
                                 </div>
@@ -2581,6 +2836,7 @@ const Dashboard = ({ stats, activeArchives, inactiveArchives, archivesByYear, ..
                                         title="Daftar Arsip Inaktif" 
                                         arsipList={inactiveArchives} 
                                         setEditingArsip={(a) => { setEditingArsip(a); navigate('tambah'); }} 
+                                        setSelectedArsipDetail={setSelectedArsipDetail} 
                                         listType="inaktif" 
                                     />
                                 </div>
