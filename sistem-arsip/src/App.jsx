@@ -308,6 +308,49 @@ export default function App() {
             .slice(0, 8); // Limit to 8 suggestions
     }, [arsipList]);
 
+    // --- Topbar Query Parser -> Advanced Filters ---
+    const parseTopbarQueryToFilters = (rawQuery) => {
+        const updates = {
+            searchTerm: '',
+            filterKlasifikasi: undefined,
+            filterStatus: undefined,
+            startDate: undefined,
+            endDate: undefined,
+            viewMode: undefined,
+        };
+
+        let q = (rawQuery || '').trim();
+        if (!q) return updates;
+
+        // Extract tokens
+        const tokenPatterns = [
+            { key: 'filterKlasifikasi', regex: /(?:\s|^)(?:klas|kode):([0-9.]+)(?=\s|$)/i },
+            { key: 'filterStatus', regex: /(?:\s|^)status:(aktif|inaktif)(?=\s|$)/i },
+            { key: 'viewMode', regex: /(?:\s|^)view:(grid|table)(?=\s|$)/i },
+            { key: 'dateRange', regex: /(?:\s|^)date:([0-9]{4}-[0-9]{2}-[0-9]{2})(?:\.\.([0-9]{4}-[0-9]{2}-[0-9]{2}))?(?=\s|$)/i },
+        ];
+
+        tokenPatterns.forEach(tp => {
+            const m = q.match(tp.regex);
+            if (m) {
+                if (tp.key === 'dateRange') {
+                    updates.startDate = m[1];
+                    updates.endDate = m[2] || m[1];
+                } else if (tp.key === 'filterStatus') {
+                    updates.filterStatus = m[1].toLowerCase();
+                } else if (tp.key === 'viewMode') {
+                    updates.viewMode = m[1].toLowerCase();
+                } else if (tp.key === 'filterKlasifikasi') {
+                    updates.filterKlasifikasi = m[1];
+                }
+                q = q.replace(m[0], ' ');
+            }
+        });
+
+        updates.searchTerm = q.replace(/\s+/g, ' ').trim();
+        return updates;
+    };
+
     // --- Search Functionality ---
     const performSearch = async (query) => {
         if (!query.trim()) {
@@ -528,12 +571,26 @@ export default function App() {
     };
 
     const handleSearchSubmit = (value) => {
-        const term = (value ?? '').trim();
-        setSearchTerm(term);
+        const raw = (value ?? '').trim();
+        const parsed = parseTopbarQueryToFilters(raw);
+
+        if (parsed.searchTerm !== undefined) setSearchTerm(parsed.searchTerm);
+        if (parsed.filterKlasifikasi !== undefined) setFilterKlasifikasi(parsed.filterKlasifikasi || 'semua');
+        if (parsed.filterStatus !== undefined) setFilterStatus(parsed.filterStatus || 'semua');
+        if (parsed.startDate !== undefined) setStartDate(parsed.startDate || '');
+        if (parsed.endDate !== undefined) setEndDate(parsed.endDate || '');
+        if (parsed.viewMode !== undefined) setViewMode(parsed.viewMode);
+
         setCurrentView('arsip');
         setSearchQuery('');
         setShowSearchResults(false);
-        if (term) toast.success(`Mencari "${term}" di arsip`);
+
+        const parts = [];
+        if (parsed.searchTerm) parts.push(`kata kunci "${parsed.searchTerm}"`);
+        if (parsed.filterKlasifikasi) parts.push(`klas ${parsed.filterKlasifikasi}`);
+        if (parsed.filterStatus) parts.push(`status ${parsed.filterStatus}`);
+        if (parsed.startDate) parts.push(`tanggal ${parsed.startDate}${parsed.endDate && parsed.endDate !== parsed.startDate ? '…'+parsed.endDate : ''}`);
+        toast.success(`Filter diterapkan: ${parts.join(', ') || 'semua data'}`);
     };
 
     // Move useMemo outside of any conditional logic
