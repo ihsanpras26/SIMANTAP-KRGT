@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
@@ -74,7 +74,7 @@ import GoogleDriveUpload from './components/GoogleDriveUpload.jsx'
 import { parseGoogleDriveLink, isValidGoogleDriveLink } from './utils/googleDriveUtils.js'
 
 // Autocomplete Input Component
-const AutocompleteInput = ({ name, label, value, onChange, getSuggestions, placeholder, required = false }) => {
+const AutocompleteInput = ({ name, label, value, onChange, getSuggestions = () => [], placeholder, required = false }) => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -281,7 +281,7 @@ export default function App() {
     // Cek konfigurasi environment variables dipindahkan ke JSX agar urutan hooks tetap konsisten
 
     // --- Autocomplete Functionality ---
-    const getAutocompleteSuggestions = (fieldName, query) => {
+    const getAutocompleteSuggestions = useCallback((fieldName, query) => {
         if (!query || query.length < 2 || !arsipList) return [];
         
         const uniqueValues = new Set();
@@ -306,7 +306,7 @@ export default function App() {
                 return a.localeCompare(b);
             })
             .slice(0, 8); // Limit to 8 suggestions
-    };
+    }, [arsipList]);
 
     // --- Search Functionality ---
     const performSearch = async (query) => {
@@ -528,12 +528,12 @@ export default function App() {
     };
 
     const handleSearchSubmit = (value) => {
-        // Set search term untuk advanced search dan switch ke arsip view
-        setSearchTerm(value ?? '');
+        const term = (value ?? '').trim();
+        setSearchTerm(term);
         setCurrentView('arsip');
-        // Clear global search
         setSearchQuery('');
         setShowSearchResults(false);
+        if (term) toast.success(`Mencari "${term}" di arsip`);
     };
 
     // Move useMemo outside of any conditional logic
@@ -912,9 +912,13 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
     const identifyKlasifikasiFromNomor = (nomorSurat) => {
         if (!nomorSurat || !klasifikasiList || klasifikasiList.length === 0) return null;
         
-        // Cari pola kode klasifikasi dalam nomor surat (contoh: 001.1, 002.3.1, dll)
-        const kodePattern = /\b(\d{3}(?:\.\d+)*)/g;
-        const matches = nomorSurat.match(kodePattern);
+        // Format nomor: (kode klasifikasi)/(nomor agenda)/(nomor instansi)
+        // Hanya ambil segmen pertama sebelum '/'
+        const firstSegment = String(nomorSurat).split('/')[0] || '';
+        
+        // Cari pola kode klasifikasi pada segmen pertama saja (contoh: 001.1, 002.3.1, dst)
+        const kodePattern = /\b(\d{3}(?:\.\d+)*)\b/g;
+        const matches = firstSegment.match(kodePattern);
         
         if (matches && matches.length > 0) {
             // Cari kode yang paling cocok dengan klasifikasi yang ada
@@ -945,9 +949,12 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
         // Auto-identifikasi kode klasifikasi dari nomor surat
         if (name === 'nomorSurat' && !useManualKode) {
             const identifiedKode = identifyKlasifikasiFromNomor(value);
-            if (identifiedKode) {
+            if (identifiedKode && identifiedKode !== formData.kodeKlasifikasi) {
                 setFormData(prev => ({ ...prev, kodeKlasifikasi: identifiedKode }));
-                showNotification(`Kode klasifikasi ${identifiedKode} teridentifikasi dari nomor surat`, 'success');
+                // Hindari spam notifikasi: tampilkan hanya saat transisi kosong -> terisi
+                if (!formData.kodeKlasifikasi) {
+                    showNotification(`Kode klasifikasi ${identifiedKode} teridentifikasi`, 'success');
+                }
             }
         }
         
@@ -1116,12 +1123,33 @@ const ArsipForm = ({ supabase, klasifikasiList, arsipToEdit, onFinish, showNotif
                 confirmArsipUpdate(arsipToEdit.id, data);
                 showNotification('Data arsip berhasil diperbarui!', 'success');
             } else {
+                // Duplicate validation (server-side check) by nomorSurat OR perihal+tanggal
+                try {
+                    let dupQuery = supabase.from('arsip').select('id, perihal, tanggalSurat, nomorSurat');
+                    if (dataToSave.nomorSurat) {
+                        dupQuery = dupQuery.eq('nomorSurat', dataToSave.nomorSurat);
+                    } else {
+                        dupQuery = dupQuery.eq('perihal', dataToSave.perihal).eq('tanggalSurat', dataToSave.tanggalSurat);
+                    }
+                    const { data: dupData } = await dupQuery.limit(1);
+                    if (dupData && dupData.length > 0) {
+                        showNotification('Arsip duplikat terdeteksi (nomor surat atau perihal + tanggal).', 'error');
+                        setIsLoading(false);
+                        return;
+                    }
+                } catch (e) {
+                    // abaikan, akan di-handle oleh unique constraint jika ada
+                }
+
                 // Optimistic insert for new arsip
                 tempId = addArsipOptimistic(dataToSave);
-                
                 const { data, error } = await supabase.from('arsip').insert([dataToSave]).select().single();
                 if (error) {
                     rollbackArsipOptimistic(tempId);
+                    if (error.code === '23505') {
+                        showNotification('Arsip duplikat terdeteksi (kombinasi data unik).', 'error');
+                        return;
+                    }
                     throw error;
                 }
                 confirmArsipOptimistic(tempId, data);
