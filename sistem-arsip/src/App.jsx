@@ -126,6 +126,14 @@ export default function App() {
     const [isSearching, setIsSearching] = useState(false);
     const [showSearchResults, setShowSearchResults] = useState(false);
     
+    // Advanced search state
+    const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterStatus, setFilterStatus] = useState('semua');
+    const [filterKlasifikasi, setFilterKlasifikasi] = useState('semua');
+    
     // Sidebar state
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
