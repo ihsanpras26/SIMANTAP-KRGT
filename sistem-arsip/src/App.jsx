@@ -30,7 +30,7 @@ import LoadingSpinner, {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { 
   LayoutDashboard, Archive, FilePlus, FolderKanban, Bell, Search, Trash2, Edit, 
-  XCircle, LogOut, Info, FileDown, Layers, Filter, X, Paperclip, FileText, 
+  XCircle, LogOut, Info, FileDown, Layers, Filter, X, Paperclip, FileText, FileX,
   CheckCircle, AlertCircle, ChevronRight, Home, Plus, Download, Upload,
   Calendar, Clock, User, Eye, Bookmark
 } from 'lucide-react';
@@ -2013,13 +2013,12 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                             <div className="overflow-x-auto">
                                 <table className="w-full">
                                     <thead>
-                                        <tr className="border-b border-gray-200">
-                                            <th className="text-left py-3 px-4 font-medium text-gray-700 w-48">Nomor Surat</th>
-                                            <th className="text-left py-3 px-4 font-medium text-gray-700">Perihal</th>
-                                            <th className="text-left py-3 px-4 font-medium text-gray-700 w-28">Tanggal Surat</th>
-                                            <th className="text-left py-3 px-4 font-medium text-gray-700 w-24">Status</th>
-                                            <th className="text-left py-3 px-4 font-medium text-gray-700 w-40">Klasifikasi</th>
-                                            <th className="text-center py-3 px-4 font-medium text-gray-700 w-36">Aksi</th>
+                                        <tr className="bg-gradient-to-r from-slate-50 to-gray-50 border-b-2 border-indigo-100">
+                                            <th className="text-left py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide">Dokumen</th>
+                                            <th className="text-left py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide">Perihal</th>
+                                            <th className="text-left py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide w-32">Tanggal</th>
+                                            <th className="text-left py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide w-40">Klasifikasi</th>
+                                            <th className="text-center py-4 px-6 font-semibold text-gray-800 text-sm uppercase tracking-wide w-32">Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -2035,58 +2034,67 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                 const fileUrl = arsip.filePath ? `${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}` : null;
 
                                             return (
-                                                <tr key={arsip.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors duration-150 cursor-pointer" onClick={() => setSelectedArsipDetail(arsip)}>
-                                                    <td className="py-4 px-4">
-                                                        <div className="flex flex-col gap-2">
-                                                            <span className="font-mono text-sm font-medium text-gray-900">{arsip.nomorSurat}</span>
-                                                            <div className="flex items-center gap-2">
-                                                                {arsip.googleDriveLink && (
-                                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="Dokumen tersedia di Google Drive">
-                                                                        <Eye size={10} className="mr-1" />
-                                                                        Online
-                                                                    </span>
+                                                <tr key={arsip.id} className="group border-b border-gray-100 hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-200 cursor-pointer" onClick={() => setSelectedArsipDetail(arsip)}>
+                                                    <td className="py-6 px-6">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex-shrink-0">
+                                                                {arsip.googleDriveLink || arsip.filePath ? (
+                                                                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                                                                        <FileText size={20} className="text-white" />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-500 rounded-xl flex items-center justify-center shadow-lg">
+                                                                        <FileX size={20} className="text-white" />
+                                                                    </div>
                                                                 )}
-                                                                {arsip.filePath && !arsip.googleDriveLink && (
-                                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800" title="File tersedia di server">
-                                                                        <FileText size={10} className="mr-1" />
-                                                                        File
-                                                                    </span>
-                                                                )}
-                                                                {!arsip.googleDriveLink && !arsip.filePath && (
-                                                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600" title="Tidak ada lampiran">
-                                                                        <FileText size={10} className="mr-1" />
-                                                                        No File
-                                                                    </span>
-                                                                )}
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-mono text-sm font-bold text-gray-900 mb-1">{arsip.nomorSurat}</div>
+                                                                <div className="flex items-center gap-2">
+                                                                    {arsip.googleDriveLink || arsip.filePath ? (
+                                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                                                                            <CheckCircle size={10} className="mr-1" />
+                                                                            Tersedia
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                                            <XCircle size={10} className="mr-1" />
+                                                                            Tidak Ada File
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </td>
-                                                    <td className="py-4 px-4">
-                                        <span className="font-medium text-gray-900">{arsip.perihal}</span>
-                                    </td>
-                                    <td className="py-4 px-4 text-gray-600">{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</td>
-                                                    <td className={`py-4 px-4 font-medium ${statusColor}`}>
-                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                                            status === 'Aktif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                                        }`}>
-                                                            {status === 'Aktif' ? <CheckCircle size={12} className="mr-1" /> : <AlertCircle size={12} className="mr-1" />}
-                                                            {status}
-                                                        </span>
+                                                    <td className="py-6 px-6">
+                                                        <div className="max-w-md">
+                                                            <h3 className="font-semibold text-gray-900 leading-tight mb-1">{arsip.perihal}</h3>
+                                                            {arsip.tujuanSurat && (
+                                                                <p className="text-sm text-gray-500">Kepada: {arsip.tujuanSurat}</p>
+                                                            )}
+                                                        </div>
                                                     </td>
-                                                    <td className="py-4 px-4">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="flex items-center bg-gradient-to-r from-indigo-50 to-purple-50 px-2 py-1 rounded-lg border border-indigo-200">
-                                                                <span className="text-xs font-mono font-bold text-indigo-700">
-                                                                    {arsip.kodeKlasifikasi}
-                                                                </span>
-                                                            </div>
-                                                            {arsip.kodeKlasifikasi && (
+                                                    <td className="py-6 px-6">
+                                                        <div className="text-sm font-medium text-gray-900">
+                                                            {new Date(arsip.tanggalSurat).toLocaleDateString('id-ID', { 
+                                                                day: 'numeric', 
+                                                                month: 'short', 
+                                                                year: 'numeric' 
+                                                            })}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-6 px-6">
+                                                        <div className="flex items-center gap-3">
+                                                            {arsip.kodeKlasifikasi ? (
                                                                 <div className="group relative">
-                                                                    <button className="p-1 text-gray-400 hover:text-indigo-600 transition-colors">
-                                                                        <Info size={12} />
-                                                                    </button>
+                                                                    <div className="flex items-center bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-2 rounded-xl border border-indigo-200 shadow-sm hover:shadow-md transition-all duration-200">
+                                                                        <span className="text-sm font-mono font-bold text-indigo-700">
+                                                                            {arsip.kodeKlasifikasi}
+                                                                        </span>
+                                                                        <Info size={14} className="ml-2 text-indigo-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+                                                                    </div>
                                                                     <div className="invisible group-hover:visible absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-20">
-                                                                        <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 max-w-xs shadow-lg">
+                                                                        <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 max-w-xs shadow-xl">
                                                                             <div className="font-semibold mb-1">Klasifikasi:</div>
                                                                             <div className="text-gray-200">
                                                                                 {getKlasifikasiDesc(arsip.kodeKlasifikasi)}
@@ -2097,76 +2105,88 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                                         </div>
                                                                     </div>
                                                                 </div>
+                                                            ) : (
+                                                                <span className="text-gray-400 text-sm">Tidak ada</span>
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="py-4 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                                                        <div className="flex justify-center gap-1">
-                                                            {/* View Actions */}
-                                                            {arsip.googleDriveLink && (
-                                                                <button 
-                                                                    onClick={() => window.open(arsip.googleDriveLink, '_blank')} 
-                                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200" 
-                                                                    title="Lihat di Google Drive"
-                                                                >
-                                                                    <Eye size={14} />
-                                                                </button>
-                                                            )}
-                                                            {arsip.filePath && !arsip.googleDriveLink && (
-                                                                <button 
-                                                                    onClick={() => window.open(`${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`, '_blank')} 
-                                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200" 
-                                                                    title="Lihat File"
-                                                                >
-                                                                    <Eye size={14} />
-                                                                </button>
-                                                            )}
-                                                            {/* Download Actions */}
-                                                            {arsip.googleDriveLink && (
+                                                    <td className="py-6 px-6" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            {/* View Action */}
+                                                            {(arsip.googleDriveLink || arsip.filePath) && (
                                                                 <button 
                                                                     onClick={() => {
-                                                                        const link = document.createElement('a');
-                                                                        link.href = arsip.googleDriveLink;
-                                                                        link.download = arsip.perihal || 'arsip';
-                                                                        document.body.appendChild(link);
-                                                                        link.click();
-                                                                        document.body.removeChild(link);
+                                                                        if (arsip.googleDriveLink) {
+                                                                            window.open(arsip.googleDriveLink, '_blank');
+                                                                        } else if (arsip.filePath) {
+                                                                            window.open(`${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`, '_blank');
+                                                                        }
                                                                     }}
-                                                                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-md transition-colors duration-200" 
-                                                                    title="Download dari Google Drive"
+                                                                    className="group relative p-2 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md" 
+                                                                    title="Lihat Dokumen"
                                                                 >
-                                                                    <Download size={14} />
+                                                                    <Eye size={16} />
                                                                 </button>
                                                             )}
-                                                            {arsip.filePath && !arsip.googleDriveLink && (
+                                                            
+                                                            {/* Download Action */}
+                                                            {(arsip.googleDriveLink || arsip.filePath) && (
                                                                 <button 
-                                                                    onClick={() => {
-                                                                        const link = document.createElement('a');
-                                                                        link.href = `${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`;
-                                                                        link.download = arsip.perihal || 'arsip';
-                                                                        document.body.appendChild(link);
-                                                                        link.click();
-                                                                        document.body.removeChild(link);
+                                                                    onClick={async () => {
+                                                                        try {
+                                                                            let downloadUrl;
+                                                                            let fileName = `${arsip.nomorSurat || 'arsip'}.pdf`;
+                                                                            
+                                                                            if (arsip.googleDriveLink) {
+                                                                                // For Google Drive, try to get direct download link
+                                                                                const fileId = arsip.googleDriveLink.match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1];
+                                                                                if (fileId) {
+                                                                                    downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                                                                                } else {
+                                                                                    downloadUrl = arsip.googleDriveLink;
+                                                                                }
+                                                                            } else if (arsip.filePath) {
+                                                                                downloadUrl = `${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`;
+                                                                                fileName = arsip.filePath.split('/').pop() || fileName;
+                                                                            }
+                                                                            
+                                                                            // Create download link
+                                                                            const link = document.createElement('a');
+                                                                            link.href = downloadUrl;
+                                                                            link.download = fileName;
+                                                                            link.target = '_blank';
+                                                                            document.body.appendChild(link);
+                                                                            link.click();
+                                                                            document.body.removeChild(link);
+                                                                            
+                                                                            toast.success('Download dimulai!');
+                                                                        } catch (error) {
+                                                                            toast.error('Gagal mendownload file');
+                                                                        }
                                                                     }}
-                                                                    className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-md transition-colors duration-200" 
-                                                                    title="Download File"
+                                                                    className="group relative p-2 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded-xl transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md" 
+                                                                    title="Download Dokumen"
                                                                 >
-                                                                    <Download size={14} />
+                                                                    <Download size={16} />
                                                                 </button>
                                                             )}
+                                                            
+                                                            {/* Edit Action */}
                                                             <button 
                                                                 onClick={() => setEditingArsip(arsip)} 
-                                                                className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200" 
+                                                                className="group relative p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md" 
                                                                 title="Edit Arsip"
                                                             >
-                                                                <Edit size={14} />
+                                                                <Edit size={16} />
                                                             </button>
+                                                            
+                                                            {/* Delete Action */}
                                                             <button 
                                                                 onClick={() => handleDelete(arsip.id, arsip.filePath, arsip.perihal)} 
-                                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200" 
+                                                                className="group relative p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md" 
                                                                 title="Hapus Arsip"
                                                             >
-                                                                <Trash2 size={14} />
+                                                                <Trash2 size={16} />
                                                             </button>
                                         </div>
                                     </td>
@@ -2180,33 +2200,58 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                 {paginatedData.map(arsip => {
                                     const isActive = new Date(arsip.tanggalRetensi) > new Date();
                                     return (
-                                        <div key={arsip.id} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow duration-200 cursor-pointer" onClick={() => setSelectedArsipDetail(arsip)}>
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    {arsip.googleDriveLink && (
-                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                            Online
-                                                        </span>
+                                        <div key={arsip.id} className="group bg-white border border-gray-200 rounded-2xl p-6 hover:shadow-xl hover:border-indigo-200 transition-all duration-300 cursor-pointer hover:-translate-y-1" onClick={() => setSelectedArsipDetail(arsip)}>
+                                            {/* Header dengan icon dokumen */}
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    {arsip.googleDriveLink || arsip.filePath ? (
+                                                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                                            <FileText size={24} className="text-white" />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-12 h-12 bg-gradient-to-br from-gray-400 to-gray-500 rounded-2xl flex items-center justify-center shadow-lg">
+                                                            <FileX size={24} className="text-white" />
+                                                        </div>
                                                     )}
-                                                    {arsip.filePath && !arsip.googleDriveLink && (
-                                                        <Paperclip size={14} className="text-gray-500" />
-                                                    )}
+                                                    <div>
+                                                        <div className="font-mono text-sm font-bold text-gray-900 mb-1">{arsip.nomorSurat}</div>
+                                                        <div className="flex items-center gap-2">
+                                                            {arsip.googleDriveLink || arsip.filePath ? (
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                                                                    <CheckCircle size={10} className="mr-1" />
+                                                                    Tersedia
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                                                                    <XCircle size={10} className="mr-1" />
+                                                                    Tidak Ada File
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                                                    isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                                }`}>
-                                                    {isActive ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
-                                                    {isActive ? 'Aktif' : 'Inaktif'}
-                                                </span>
                                             </div>
                                             
-                                            <h4 className="font-medium text-gray-900 mb-2 line-clamp-2">{arsip.perihal}</h4>
-                                            <p className="text-sm text-gray-600 mb-2">No: {arsip.nomorSurat}</p>
+                                            {/* Content */}
+                                            <div className="mb-4">
+                                                <h4 className="font-bold text-gray-900 mb-2 line-clamp-2 text-lg leading-tight group-hover:text-indigo-700 transition-colors">{arsip.perihal}</h4>
+                                                {arsip.tujuanSurat && (
+                                                    <p className="text-sm text-gray-500 mb-2">Kepada: {arsip.tujuanSurat}</p>
+                                                )}
+                                            </div>
                                             
-                                            <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
-                                                <span>{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID')}</span>
+                                            {/* Footer Info */}
+                                            <div className="flex items-center justify-between text-sm mb-4">
+                                                <div className="flex items-center gap-2 text-gray-600">
+                                                    <Calendar size={14} />
+                                                    <span>{new Date(arsip.tanggalSurat).toLocaleDateString('id-ID', { 
+                                                        day: 'numeric', 
+                                                        month: 'short', 
+                                                        year: 'numeric' 
+                                                    })}</span>
+                                                </div>
                                                 {arsip.kodeKlasifikasi && (
-                                                    <div className="flex items-center bg-gradient-to-r from-indigo-50 to-purple-50 px-2 py-1 rounded border border-indigo-200">
+                                                    <div className="flex items-center bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-1 rounded-xl border border-indigo-200 shadow-sm">
                                                         <span className="text-xs font-mono font-bold text-indigo-700">
                                                             {arsip.kodeKlasifikasi}
                                                         </span>
@@ -2214,73 +2259,84 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
                                                 )}
                                             </div>
                                             
-                                            <div className="flex items-center justify-between pt-3 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex items-center gap-1">
-                                                    {arsip.googleDriveLink && (
-                                                        <>
-                                                            <button 
-                                                                onClick={() => window.open(arsip.googleDriveLink, '_blank')} 
-                                                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200" 
-                                                                title="Lihat di Google Drive"
-                                                            >
-                                                                <Eye size={14} />
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => {
-                                                                    const link = document.createElement('a');
-                                                                    link.href = arsip.googleDriveLink;
-                                                                    link.download = arsip.perihal || 'arsip';
-                                                                    document.body.appendChild(link);
-                                                                    link.click();
-                                                                    document.body.removeChild(link);
-                                                                }}
-                                                                className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-md transition-colors duration-200" 
-                                                                title="Download dari Google Drive"
-                                                            >
-                                                                <Download size={14} />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                    {arsip.filePath && !arsip.googleDriveLink && (
-                                                        <>
-                                                            <button 
-                                                                onClick={() => window.open(`${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`, '_blank')} 
-                                                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors duration-200" 
-                                                                title="Lihat File"
-                                                            >
-                                                                <Eye size={14} />
-                                                            </button>
-                                                            <button 
-                                                                onClick={() => {
-                                                                    const link = document.createElement('a');
-                                                                    link.href = `${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`;
-                                                                    link.download = arsip.perihal || 'arsip';
-                                                                    document.body.appendChild(link);
-                                                                    link.click();
-                                                                    document.body.removeChild(link);
-                                                                }}
-                                                                className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-md transition-colors duration-200" 
-                                                                title="Download File"
-                                                            >
-                                                                <Download size={14} />
-                                                            </button>
-                                                        </>
-                                                    )}
+                                            {/* Action Buttons */}
+                                            <div className="flex items-center justify-center gap-2 pt-4 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
+                                                {/* View Action */}
+                                                {(arsip.googleDriveLink || arsip.filePath) && (
                                                     <button 
-                                                        onClick={() => setEditingArsip(arsip)} 
-                                                        className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-md transition-colors duration-200" 
-                                                        title="Edit Arsip"
+                                                        onClick={() => {
+                                                            if (arsip.googleDriveLink) {
+                                                                window.open(arsip.googleDriveLink, '_blank');
+                                                            } else if (arsip.filePath) {
+                                                                window.open(`${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`, '_blank');
+                                                            }
+                                                        }}
+                                                        className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md font-medium" 
+                                                        title="Lihat Dokumen"
                                                     >
-                                                        <Edit size={14} />
+                                                        <Eye size={16} />
+                                                        <span className="text-sm">Lihat</span>
                                                     </button>
+                                                )}
+                                                
+                                                {/* Download Action */}
+                                                {(arsip.googleDriveLink || arsip.filePath) && (
                                                     <button 
-                                                        onClick={() => handleDelete(arsip.id, arsip.filePath, arsip.perihal)} 
-                                                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors duration-200" 
-                                                        title="Hapus Arsip"
+                                                        onClick={async () => {
+                                                            try {
+                                                                let downloadUrl;
+                                                                let fileName = `${arsip.nomorSurat || 'arsip'}.pdf`;
+                                                                
+                                                                if (arsip.googleDriveLink) {
+                                                                    const fileId = arsip.googleDriveLink.match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1];
+                                                                    if (fileId) {
+                                                                        downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                                                                    } else {
+                                                                        downloadUrl = arsip.googleDriveLink;
+                                                                    }
+                                                                } else if (arsip.filePath) {
+                                                                    downloadUrl = `${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`;
+                                                                    fileName = arsip.filePath.split('/').pop() || fileName;
+                                                                }
+                                                                
+                                                                const link = document.createElement('a');
+                                                                link.href = downloadUrl;
+                                                                link.download = fileName;
+                                                                link.target = '_blank';
+                                                                document.body.appendChild(link);
+                                                                link.click();
+                                                                document.body.removeChild(link);
+                                                                
+                                                                toast.success('Download dimulai!');
+                                                            } catch (error) {
+                                                                toast.error('Gagal mendownload file');
+                                                            }
+                                                        }}
+                                                        className="flex-1 flex items-center justify-center gap-2 py-2 px-3 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded-xl transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md font-medium" 
+                                                        title="Download Dokumen"
                                                     >
-                                                        <Trash2 size={14} />
+                                                        <Download size={16} />
+                                                        <span className="text-sm">Download</span>
                                                     </button>
-                                                </div>
+                                                )}
+                                                
+                                                {/* Edit Action */}
+                                                <button 
+                                                    onClick={() => setEditingArsip(arsip)} 
+                                                    className="p-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md" 
+                                                    title="Edit Arsip"
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                                
+                                                {/* Delete Action */}
+                                                <button 
+                                                    onClick={() => handleDelete(arsip.id, arsip.filePath, arsip.perihal)} 
+                                                    className="p-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl transition-all duration-200 hover:scale-105 shadow-sm hover:shadow-md" 
+                                                    title="Hapus Arsip"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
                                             </div>
                                         </div>
                                     );
@@ -2463,6 +2519,38 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                 )}
                             </div>
 
+                            {/* Status Arsip */}
+                            <div className="bg-gray-50 rounded-lg p-5">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                    <Clock size={20} className="text-amber-600" />
+                                    Status Arsip
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-600">Status Retensi</label>
+                                        <div className="mt-2">
+                                            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-medium ${
+                                                isActive 
+                                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                                                    : 'bg-red-100 text-red-800 border border-red-200'
+                                            }`}>
+                                                {isActive ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                                                {isActive ? 'Aktif' : 'Inaktif'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-600">Tanggal Retensi</label>
+                                        <p className="text-gray-900 font-medium mt-1">{formatDate(arsip.tanggalRetensi)}</p>
+                                    </div>
+                                </div>
+                                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <p className="text-sm text-blue-800">
+                                        <span className="font-medium">Info:</span> Status menunjukkan apakah arsip masih dalam masa retensi aktif atau sudah memasuki fase inaktif.
+                                    </p>
+                                </div>
+                            </div>
+
                             {/* File Access */}
                             {(arsip.googleDriveLink || arsip.filePath) && (
                                 <div className="bg-gray-50 rounded-lg p-5">
@@ -2481,13 +2569,30 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                                     Lihat di Google Drive
                                                 </button>
                                                 <button
-                                                    onClick={() => {
-                                                        const link = document.createElement('a');
-                                                        link.href = arsip.googleDriveLink;
-                                                        link.download = arsip.perihal || 'arsip';
-                                                        document.body.appendChild(link);
-                                                        link.click();
-                                                        document.body.removeChild(link);
+                                                    onClick={async () => {
+                                                        try {
+                                                            let downloadUrl;
+                                                            let fileName = `${arsip.nomorSurat || 'arsip'}.pdf`;
+                                                            
+                                                            const fileId = arsip.googleDriveLink.match(/\/d\/([a-zA-Z0-9-_]+)/)?.[1];
+                                                            if (fileId) {
+                                                                downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+                                                            } else {
+                                                                downloadUrl = arsip.googleDriveLink;
+                                                            }
+                                                            
+                                                            const link = document.createElement('a');
+                                                            link.href = downloadUrl;
+                                                            link.download = fileName;
+                                                            link.target = '_blank';
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+                                                            
+                                                            toast.success('Download dimulai!');
+                                                        } catch (error) {
+                                                            toast.error('Gagal mendownload file');
+                                                        }
                                                     }}
                                                     className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
                                                 >
@@ -2506,13 +2611,23 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                                     Lihat File
                                                 </button>
                                                 <button
-                                                    onClick={() => {
-                                                        const link = document.createElement('a');
-                                                        link.href = `${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`;
-                                                        link.download = arsip.perihal || 'arsip';
-                                                        document.body.appendChild(link);
-                                                        link.click();
-                                                        document.body.removeChild(link);
+                                                    onClick={async () => {
+                                                        try {
+                                                            const downloadUrl = `${supabaseUrl}/storage/v1/object/public/arsip-files/${arsip.filePath}`;
+                                                            const fileName = arsip.filePath.split('/').pop() || `${arsip.nomorSurat || 'arsip'}.pdf`;
+                                                            
+                                                            const link = document.createElement('a');
+                                                            link.href = downloadUrl;
+                                                            link.download = fileName;
+                                                            link.target = '_blank';
+                                                            document.body.appendChild(link);
+                                                            link.click();
+                                                            document.body.removeChild(link);
+                                                            
+                                                            toast.success('Download dimulai!');
+                                                        } catch (error) {
+                                                            toast.error('Gagal mendownload file');
+                                                        }
                                                     }}
                                                     className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200"
                                                 >
