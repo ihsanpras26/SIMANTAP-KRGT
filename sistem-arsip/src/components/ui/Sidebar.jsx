@@ -5,8 +5,6 @@ import {
   Archive,
   FilePlus,
   FolderKanban,
-  Search,
-  FileDown,
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
@@ -18,8 +16,6 @@ const sidebarItems = [
   { id: 'arsip', label: 'Daftar Arsip', icon: Archive },
   { id: 'tambah-arsip', label: 'Tambah Arsip', icon: FilePlus },
   { id: 'klasifikasi', label: 'Klasifikasi', icon: FolderKanban },
-  { id: 'pencarian', label: 'Pencarian Lanjutan', icon: Search },
-  { id: 'laporan', label: 'Laporan', icon: FileDown },
 ];
 
 const Sidebar = ({
@@ -59,7 +55,8 @@ const Sidebar = ({
               </div>
               <div>
                 <h1 className="text-gray-900 font-bold text-lg">SIMANTEP</h1>
-                <p className="text-gray-500 text-xs">Sistem Arsip Digital</p>
+                <p className="text-gray-500 text-xs leading-tight">Sistem Informasi Manajemen<br/>Arsip Terpadu</p>
+                <p className="text-gray-400 text-xs mt-1">Kebun Raya Gunung Tidar</p>
               </div>
             </div>
           )}
@@ -122,8 +119,9 @@ const Sidebar = ({
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200/60 bg-white">
         {!collapsedState && (
           <div className="text-center text-gray-500 text-xs transition-opacity duration-300">
-            <p>© {new Date().getFullYear()} SIMANTEP</p>
-            <p>Versi 1.0.0</p>
+            <p>© 2025 SIMANTEP</p>
+            <p>Kebun Raya Gunung Tidar</p>
+            <p className="text-gray-400">Versi 1.0.0</p>
           </div>
         )}
       </div>

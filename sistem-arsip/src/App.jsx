@@ -702,8 +702,8 @@ export default function App() {
                 return <KlasifikasiManager {...props} openModal={() => setShowKlasifikasiModal(true)} />;
             case 'semua':
                  return <ArsipList {...props} title="Semua Arsip" arsipList={arsipList} setEditingArsip={(a) => { setEditingArsip(a); navigate('tambah'); }} setSelectedArsipDetail={setSelectedArsipDetail} listType="semua" />;
-            case 'laporan':
-                 return <ReportingView {...props} />;
+            case 'arsip':
+                 return <ArsipList {...props} title="Daftar Arsip" arsipList={arsipList} setEditingArsip={(a) => { setEditingArsip(a); navigate('tambah'); }} setSelectedArsipDetail={setSelectedArsipDetail} listType="arsip" />;
             default:
                 return <Dashboard {...props} stats={{ total: arsipList.length, active: activeArchives.length, inactive: inactiveArchives.length }} archivesByYear={archivesByYear} />;
         }
@@ -714,7 +714,6 @@ export default function App() {
         { id: 'tambah', label: 'Tambah Arsip', icon: FilePlus, view: 'tambah' },
         { id: 'semua', label: 'Semua Arsip', icon: Layers, view: 'semua' },
         { id: 'klasifikasi', label: 'Kode Klasifikasi', icon: FolderKanban, view: 'klasifikasi' },
-        { id: 'laporan', label: 'Laporan', icon: FileText, view: 'laporan' },
     ];
 
     const handleLogout = async () => {
@@ -782,8 +781,7 @@ export default function App() {
                             currentView === 'tambah' ? 'Tambah Arsip' :
                             currentView === 'semua' ? 'Semua Arsip' :
                             currentView === 'arsip' ? 'Daftar Arsip' :
-                            currentView === 'klasifikasi' ? 'Kode Klasifikasi' :
-                            currentView === 'laporan' ? 'Laporan' : 'Sistem Arsip'
+                            currentView === 'klasifikasi' ? 'Kode Klasifikasi' : 'Sistem Arsip'
                         }
                         onLogout={handleLogout}
                     />
@@ -1797,21 +1795,33 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                         </div>
                                         <div>
                                             <div className="font-bold text-lg text-gray-900">{mainCode}</div>
-                                            {mainItem && (
+                                            {mainItem ? (
                                                 <div className="text-gray-600">{mainItem.deskripsi}</div>
-                                            )}
+                                            ) : mainCode.length === 3 ? (
+                                                <div className="text-gray-500 italic">Kategori Pembatas</div>
+                                            ) : null}
                                             <div className="flex items-center gap-4 mt-2">
-                                                {mainItem && (
+                                                {/* Untuk kode 3 digit: hanya tampilkan jumlah sub-kode */}
+                                                {mainCode.length === 3 && !mainItem ? (
+                                                    <span className="text-sm bg-white px-3 py-1 rounded-full text-blue-600 font-medium border border-blue-200">
+                                                        📁 {subItems.length} sub-kode
+                                                    </span>
+                                                ) : mainItem ? (
+                                                    /* Untuk kode yang ada datanya: tampilkan retensi */
                                                     <>
-                                                        <span className="text-sm bg-white px-2 py-1 rounded text-blue-700 font-medium">
+                                                        <span className="text-sm bg-white px-2 py-1 rounded text-emerald-700 font-medium border border-emerald-200">
                                                             Aktif: {mainItem.retensiAktif} tahun
                                                         </span>
-                                                        <span className="text-sm bg-white px-2 py-1 rounded text-blue-700 font-medium">
+                                                        <span className="text-sm bg-white px-2 py-1 rounded text-amber-700 font-medium border border-amber-200">
                                                             Inaktif: {mainItem.retensiInaktif} tahun
                                                         </span>
+                                                        {subItems.length > 0 && (
+                                                            <span className="text-sm text-blue-600 font-medium">
+                                                                {subItems.length} sub-kategori
+                                                            </span>
+                                                        )}
                                                     </>
-                                                )}
-                                                {subItems.length > 0 && (
+                                                ) : subItems.length > 0 && (
                                                     <span className="text-sm text-blue-600 font-medium">
                                                         {subItems.length} sub-kategori
                                                     </span>
@@ -1820,8 +1830,8 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        {/* Actions for main item */}
-                                        {mainItem && (
+                                        {/* Actions hanya untuk kode yang memiliki data (bukan pembatas 3 digit) */}
+                                        {mainItem && mainCode.length > 3 && (
                                             <div className="flex items-center gap-2">
                                                 <button 
                                                     onClick={(e) => { 
@@ -1830,7 +1840,7 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                                         openModal && openModal(); 
                                                     }} 
                                                     className="p-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                                                    title="Edit Kategori Utama"
+                                                    title="Edit Kategori"
                                                 >
                                                     <Edit size={16} />
                                                 </button>
@@ -1840,16 +1850,18 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                                         handleDelete(mainItem.id, mainItem.kode);
                                                     }} 
                                                     className="p-2 bg-white border border-red-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                                                    title="Hapus Kategori Utama"
+                                                    title="Hapus Kategori"
                                                 >
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
                                         )}
-                                        <ChevronRight 
-                                            className={`text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} 
-                                            size={20} 
-                                        />
+                                        {subItems.length > 0 && (
+                                            <ChevronRight 
+                                                className={`text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} 
+                                                size={20} 
+                                            />
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -1883,9 +1895,12 @@ const KlasifikasiManager = ({ supabase, klasifikasiList, editingKlasifikasi, set
                                                                     <span className="font-mono font-bold text-gray-900">{item.kode}</span>
                                                                     <span className="text-gray-600">{item.deskripsi}</span>
                                                                 </div>
-                                                                <div className="flex items-center gap-3 mt-1">
-                                                                    <span className="text-xs text-gray-500">
-                                                                        Retensi: {item.retensiAktif}/{item.retensiInaktif} tahun
+                                                                <div className="flex items-center gap-3 mt-2">
+                                                                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-medium">
+                                                                        Aktif: {item.retensiAktif} tahun
+                                                                    </span>
+                                                                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded font-medium">
+                                                                        Inaktif: {item.retensiInaktif} tahun
                                                                     </span>
                                                                 </div>
                                                             </div>
@@ -2937,10 +2952,7 @@ const ArsipList = ({ title, arsipList, klasifikasiList, setEditingArsip, supabas
 
 
 
-const ReportingView = ({ arsipList, klasifikasiList }) => {
-    // Logika komponen ini tidak perlu diubah karena hanya memproses data yang sudah ada di client
-    return <div className="text-center p-8 bg-white rounded-xl shadow-md border border-gray-200">Fitur Laporan dalam pengembangan untuk versi Supabase.</div>;
-};
+
 
 const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
     if (!arsip) return null;
@@ -3049,9 +3061,14 @@ const ArsipDetailModal = ({ arsip, klasifikasiList, onClose }) => {
                                         {klasifikasi && (
                                             <div>
                                                 <p className="font-semibold text-gray-900 text-lg">{klasifikasi.deskripsi}</p>
-                                                <p className="text-gray-600">
-                                                    Retensi: {klasifikasi.retensiAktif}/{klasifikasi.retensiInaktif} tahun
-                                                </p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded font-medium">
+                                                        Aktif: {klasifikasi.retensiAktif} tahun
+                                                    </span>
+                                                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded font-medium">
+                                                        Inaktif: {klasifikasi.retensiInaktif} tahun
+                                                    </span>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
