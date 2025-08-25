@@ -2020,15 +2020,7 @@ const KlasifikasiForm = ({ supabase, klasifikasiToEdit, onFinish, showNotificati
                 showNotification('Kode klasifikasi berhasil diperbarui!', 'success');
                 onFinish();
             } else {
-                // Check for duplicate kode before inserting
-                console.log("Checking for duplicates. Current klasifikasiList:", klasifikasiList);
-                console.log("Kode to save:", dataToSave.kode);
-                if (klasifikasiList && klasifikasiList.find(k => k.kode === dataToSave.kode)) {
-                    showNotification(`Kode klasifikasi "${dataToSave.kode}" sudah ada. Gunakan kode yang berbeda.`, 'error');
-                    setIsLoading(false);
-                    return;
-                }
-                
+                // The database's unique constraint will handle duplicate checks.
                 // Optimistic insert for new klasifikasi
                 tempId = addKlasifikasiOptimistic(dataToSave);
                 
